@@ -1,0 +1,2 @@
+fleetctl destroy *.service
+

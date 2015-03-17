@@ -1,0 +1,325 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "CoreOS on EC2: http://coreos.com/docs/running-coreos/cloud-providers/ec2/",
+  "Mappings" : {
+      "RegionMap" : {
+
+          "eu-central-1" : {
+              "AMI" : "ami-8ec1f293"
+          },
+
+          "ap-northeast-1" : {
+              "AMI" : "ami-e85c46e9"
+          },
+
+          "sa-east-1" : {
+              "AMI" : "ami-2de95630"
+          },
+
+          "ap-southeast-2" : {
+              "AMI" : "ami-4dd3a777"
+          },
+
+          "ap-southeast-1" : {
+              "AMI" : "ami-72dcf620"
+          },
+
+          "us-east-1" : {
+              "AMI" : "ami-8297d4ea"
+          },
+
+          "us-west-2" : {
+              "AMI" : "ami-f1702bc1"
+          },
+
+          "us-west-1" : {
+              "AMI" : "ami-24b5ad61"
+          },
+
+          "eu-west-1" : {
+              "AMI" : "ami-5d911f2a"
+          }
+
+      }
+  },
+  "Parameters": {
+    "InstanceType" : {
+      "Description" : "EC2 HVM instance type (m3.medium, etc).",
+      "Type" : "String",
+      "Default" : "m3.medium",
+      "ConstraintDescription" : "Must be a valid EC2 HVM instance type."
+    },
+    "ClusterSize": {
+      "Default": "1",
+      "MinValue": "0",
+      "MaxValue": "12",
+      "Description": "Number of nodes in cluster (3-12).",
+      "Type": "Number"
+    },
+    "DiscoveryURL": {
+      "Description": "An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new",
+      "Type": "String"
+    },
+    "AdvertisedIPAddress": {
+      "Description": "Use 'private' if your etcd cluster is within one region or 'public' if it spans regions or cloud providers.",
+      "Default": "private",
+      "AllowedValues": ["private", "public"],
+      "Type": "String"
+    },
+    "AllowSSHFrom": {
+      "Description": "The net block (CIDR) that SSH is available to.",
+      "Default": "0.0.0.0/0",
+      "Type": "String"
+    },
+    "KeyName" : {
+      "Description" : "The name of an EC2 Key Pair to allow SSH access to the instance.",
+      "Type" : "String"
+    }
+  },
+  "Resources": {
+    "AppLBSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "application LoadBalancer SecurityGroup",
+        "SecurityGroupIngress": [
+          {"IpProtocol": "tcp", "FromPort": "80", "ToPort": "80", "CidrIp": "0.0.0.0/0" }
+        ]
+      }
+    },
+    "CoreOSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "CoreOS SecurityGroup",
+        "SecurityGroupIngress": [
+          {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": {"Ref": "AllowSSHFrom"}}
+        ]
+      }
+    },
+    "Ingress4001": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "CoreOSSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "CoreOSSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress7001": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "CoreOSSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "CoreOSSecurityGroup", "GroupId" ] 
+        } 
+      }
+    },
+    "ConsulSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Consul Security Group"
+      }
+    },
+    "Ingress8300": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "8300", "ToPort": "8300", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8301": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "8301", "ToPort": "8301", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8302": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "8302", "ToPort": "8302", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8400": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "8400", "ToPort": "8400", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8500": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "8500", "ToPort": "8500", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8600udp": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "udp", "FromPort": "8600", "ToPort": "8600", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8301udp": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "udp", "FromPort": "8301", "ToPort": "8301", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+    "Ingress8302udp": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "ConsulSecurityGroup"}, "IpProtocol": "udp", "FromPort": "8302", "ToPort": "8302", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "ConsulSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+
+    "AppSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Application SecurityGroup",
+        "SecurityGroupIngress": [
+          {"IpProtocol": "tcp", "FromPort": "80", "ToPort": "80", "CidrIp": {"Ref": "AllowSSHFrom"}}
+        ]
+      }
+    },
+    "IngressAppNonPrivileged": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupName": {"Ref": "AppSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "1024", "ToPort": "65535", "SourceSecurityGroupId": {
+          "Fn::GetAtt" : [ "AppSecurityGroup", "GroupId" ] 
+        }
+      }
+    },
+
+    "AppLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "AvailabilityZones": {"Fn::GetAZs": ""},
+        "HealthCheck": {
+          "HealthyThreshold": "2",
+          "Interval": "5",
+          "Target": "TCP:80",
+          "Timeout": "2",
+          "UnhealthyThreshold": "2"
+        },
+        "Listeners": [
+          {
+            "InstancePort": "80",
+            "LoadBalancerPort": "80",
+            "Protocol": "HTTP",
+            "InstanceProtocol": "HTTP"
+          }
+        ]
+      }
+    },
+
+    "AppDnsRecord": {
+      "Type": "AWS::Route53::RecordSetGroup",
+      "Properties": {
+        "HostedZoneName": "dutchdevops.net.",
+        "RecordSets": [
+          {
+            "Name": { "Fn::Join" : [ "", [ { "Ref" : "KeyName" } , ".dutchdevops.net." ] ] },
+            "Type": "CNAME",
+            "TTL": "300",
+            "ResourceRecords": [
+               { "Fn::GetAtt" : [ "AppLoadBalancer" , "DNSName" ] }
+            ]
+          }
+        ]
+      }
+    },
+
+    "CoreOSServerAutoScaleConsulServer": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": {"Fn::GetAZs": ""},
+        "LaunchConfigurationName": {"Ref": "CoreOSServerLaunchConfigConsulServer"},
+        "LoadBalancerNames" : [ {"Ref": "AppLoadBalancer"} ],
+        "MinSize": "3",
+        "MaxSize": "5",
+        "DesiredCapacity": "3",
+        "Tags": [
+            {"Key": "Name", "Value": { "Ref" : "AWS::StackName" }, "PropagateAtLaunch": true}
+        ]
+      }
+    },
+    "CoreOSServerLaunchConfigConsulServer": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "InstanceType": {"Ref": "InstanceType"},
+        "KeyName": {"Ref": "KeyName"},
+        "SecurityGroups": [{"Ref": "CoreOSSecurityGroup"}, {"Ref": "ConsulSecurityGroup"}, {"Ref": "AppSecurityGroup"} ],
+        "UserData" : { "Fn::Base64":
+          { "Fn::Join": [ "", [
+            "#cloud-config\n\n",
+            "coreos:\n",
+            "  etcd:\n",
+            "    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
+            "    addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:4001\n",
+            "    peer-addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:7001\n",
+            "  fleet:\n", 
+            "    metadata: \"region=", { "Ref": "AWS::Region" }, ",consul_role=server\"\n",
+            "  units:\n",
+            "    - name: etcd.service\n",
+            "      command: start\n",
+            "    - name: fleet.service\n",
+            "      command: start\n"
+            ] ]
+          }
+        }
+      }
+    },
+    "CoreOSServerAutoScale": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": {"Fn::GetAZs": ""},
+        "LaunchConfigurationName": {"Ref": "CoreOSServerLaunchConfig"},
+        "LoadBalancerNames" : [ {"Ref": "AppLoadBalancer"} ],
+        "MinSize": "1",
+        "MaxSize": "12",
+        "DesiredCapacity": {"Ref": "ClusterSize"},
+        "Tags": [
+            {"Key": "Name", "Value": { "Ref" : "AWS::StackName" }, "PropagateAtLaunch": true}
+        ]
+      }
+    },
+    "CoreOSServerLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "InstanceType": {"Ref": "InstanceType"},
+        "KeyName": {"Ref": "KeyName"},
+        "SecurityGroups": [{"Ref": "CoreOSSecurityGroup"}, {"Ref": "ConsulSecurityGroup"}, {"Ref": "AppSecurityGroup"} ],
+        "UserData" : { "Fn::Base64":
+          { "Fn::Join": [ "", [
+            "#cloud-config\n\n",
+            "coreos:\n",
+            "  etcd:\n",
+            "    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
+            "    addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:4001\n",
+            "    peer-addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:7001\n",
+            "  fleet:\n", 
+            "    metadata: \"region=", { "Ref": "AWS::Region" }, ",consul_role=client\"\n",
+            "  units:\n",
+            "    - name: etcd.service\n",
+            "      command: start\n",
+            "    - name: fleet.service\n",
+            "      command: start\n"
+            ] ]
+          }
+        }
+      }
+    }
+  }
+}

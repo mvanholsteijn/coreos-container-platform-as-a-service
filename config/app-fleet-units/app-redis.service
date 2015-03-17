@@ -1,0 +1,11 @@
+[Unit]
+Description=redis
+
+[Service]
+ExecStartPre=-/usr/bin/docker kill redis
+ExecStartPre=-/usr/bin/docker rm redis
+ExecStart=/usr/bin/docker run --rm --name redis -p 6379:6379 redis
+ExecStop=/usr/bin/docker stop redis
+
+[X-Fleet]
+Conflicts=redis.service
