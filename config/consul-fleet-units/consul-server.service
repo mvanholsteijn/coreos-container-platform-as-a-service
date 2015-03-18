@@ -4,8 +4,8 @@ After=docker.service
 After=etcd.service
 
 [Service]
-Restart=on-failure
-RestartSec=240
+Restart=always
+RestartSec=60
 ExecStartPre=-/usr/bin/docker kill consul
 ExecStartPre=-/usr/bin/docker rm consul
 ExecStartPre=/usr/bin/docker pull progrium/consul

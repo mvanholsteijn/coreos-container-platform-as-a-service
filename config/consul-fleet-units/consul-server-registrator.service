@@ -1,9 +1,10 @@
 [Unit]
 Description=Registrator
-PartOf=consul-client.service
-After=consul-client.service
+PartOf=consul-server.service
+After=consul-server.service
 [Service]
-Restart=on-failure
+Restart=always
+RestartSec=60
 ExecStartPre=-/usr/bin/docker kill registrator
 ExecStartPre=-/usr/bin/docker rm registrator
 ExecStartPre=/usr/bin/docker pull progrium/registrator
