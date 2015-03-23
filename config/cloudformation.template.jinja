@@ -71,6 +71,10 @@
       "Default": "0.0.0.0/0",
       "Type": "String"
     },
+    "HostedZoneName" : {
+      "Description" : "DNS domain name under which the DNS record are to be registered",
+      "Type" : "String"
+    },
     "KeyName" : {
       "Description" : "The name of an EC2 Key Pair to allow SSH access to the instance.",
       "Type" : "String"
@@ -225,10 +229,10 @@
     "AppDnsRecord": {
       "Type": "AWS::Route53::RecordSetGroup",
       "Properties": {
-        "HostedZoneName": "dutchdevops.net.",
+        "HostedZoneName": {"Ref": "HostedZoneName"},
         "RecordSets": [
           {
-            "Name": { "Fn::Join" : [ "", [ { "Ref" : "KeyName" } , ".dutchdevops.net." ] ] },
+            "Name": { "Fn::Join" : [ "", [ { "Ref" : "KeyName" } , ".", {"Ref": "HostedZoneName"} ] ] },
             "Type": "CNAME",
             "TTL": "300",
             "ResourceRecords": [
@@ -245,7 +249,7 @@
         "HostedZoneName": "dutchdevops.net.",
         "RecordSets": [
           {
-            "Name": { "Fn::Join" : [ "", [ "*.", { "Ref" : "KeyName" } , ".dutchdevops.net." ] ] },
+            "Name": { "Fn::Join" : [ "", [ "*.", { "Ref" : "KeyName" } , ".", {"Ref": "HostedZoneName"} ] ] },
             "Type": "CNAME",
             "TTL": "300",
             "ResourceRecords": [
@@ -340,7 +344,21 @@
 	    "        ExecStart=/bin/sh -c \". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500\"\n",
 	    "        ExecStop=/usr/bin/docker stop registrator\n",
 	    "        [X-Fleet]\n",
-	    "        MachineMetadata=consul_role=server\n"
+	    "        MachineMetadata=consul_role=server\n",
+	    "    - name: consul-http-router.service\n",
+	    "      command: start\n",
+	    "      content: |\n",
+	    "        [Unit]\n",
+	    "        Description=consul-http-router\n",
+	    "        \n",
+	    "        [Service]\n",
+	    "        PartOf=consul-server.service\n",
+	    "        After=consul-server.service\n",
+	    "        EnvironmentFile=/etc/environment\n",
+	    "        ExecStartPre=-/usr/bin/docker kill consul-http-router\n",
+	    "        ExecStartPre=-/usr/bin/docker rm consul-http-router\n",
+	    "        ExecStart=/bin/sh -c \"/usr/bin/docker run --rm --name consul-http-router -p $COREOS_PRIVATE_IPV4:80:80 --dns 172.17.42.1 --dns-search=service.consul mvanholsteijn/consul-nginx\n",
+	    "        ExecStop=/usr/bin/docker stop consul-http-router\n"
             ] ]
           }
         }
@@ -415,7 +433,22 @@
 	    "        ExecStart=/bin/sh -c \". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500\"\n",
 	    "        ExecStop=/usr/bin/docker stop registrator\n",
 	    "        [X-Fleet]\n",
-	    "        MachineMetadata=consul_role=client\n"
+	    "        MachineMetadata=consul_role=client\n",
+	    "    - name: consul-http-router.service\n",
+	    "      command: start\n",
+	    "      content: |\n",
+	    "        [Unit]\n",
+	    "        Description=consul-http-router\n",
+	    "        [Service]\n",
+	    "        PartOf=consul-client.service\n",
+	    "        After=consul-client.service\n",
+	    "        Restart=always\n",
+	    "        RestartSecs=10\n",
+	    "        EnvironmentFile=/etc/environment\n",
+	    "        ExecStartPre=-/usr/bin/docker kill consul-http-router\n",
+	    "        ExecStartPre=-/usr/bin/docker rm consul-http-router\n",
+	    "        ExecStart=/bin/sh -c \"/usr/bin/docker run --rm --name consul-http-router -p $COREOS_PRIVATE_IPV4:80:80 --dns 172.17.42.1 --dns-search=service.consul mvanholsteijn/consul-nginx\n",
+	    "        ExecStop=/usr/bin/docker stop consul-http-router\n"
             ] ]
           }
         }

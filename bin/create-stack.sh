@@ -17,7 +17,7 @@ function parseCommandLine() {
 			d)
 				DOMAIN_NAME=${OPTARG}
 				KEY_NAME=$(echo $OPTARG | sed -e 's/\([^\.]*\).*/\1/g')
-				HOSTED_ZONE=$(echo $OPTARG | sed -e "s/^${KEYNAME}\.//g')
+				HOSTED_ZONE=$(echo $OPTARG | sed -e "s/^$i[^\.]*\.//g")
 				STACK_NAME=$(echo $DOMAIN_NAME | sed -e 's/[^a-zA-Z0-9]//g')
 				STACK_DIR=stacks/$STACK_NAME
 				;;
@@ -90,6 +90,7 @@ function createStack() {
 	export SSL_KEY_NAME STACK_NAME REGION KEY_NAME
 	export PARAMETERS=$(cat <<!
 [ { "ParameterKey": "KeyName", "ParameterValue": "$KEY_NAME", "UsePreviousValue": false },
+  { "ParameterKey": "HostedZoneName", "ParameterValue": "$HOSTED_ZONE", "UsePreviousValue": false },
   { "ParameterKey": "DiscoveryURL", "ParameterValue": "$(curl -s https://discovery.etcd.io/new)", "UsePreviousValue": false }
 ]
 !)
@@ -157,13 +158,12 @@ function getAllPrivateIPAddresses() {
 
 
 function checkHostedZoneExists() {
-	DOMAIN=$(echo $DOMAIN_NAME | sed -e 's/[^\.]*\.\(.*\)/\1/g')
 	EXISTS=$( aws route53 list-hosted-zones  | \
 			jq -r '.HostedZones[] | .Name' | \
-			grep -i "^$DOMAIN.\$" )
+			grep -i "^$HOSTED_ZONE.\$" )
 
 	if [ -z "$EXISTS" ] ; then
-		echo ERROR hosted zone for $DOMAIN does not exist in route53.
+		echo ERROR hosted zone $HOSTED_ZONE for $DOMAIN does not exist in route53.
 		exit 1
 	fi
 }

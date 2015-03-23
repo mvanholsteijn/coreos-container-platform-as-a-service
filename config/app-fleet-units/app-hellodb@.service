@@ -1,9 +1,0 @@
-[Unit]
-Description=hellodb
-
-[Service]
-ExecStartPre=-/usr/bin/docker kill hellodb-%i
-ExecStartPre=-/usr/bin/docker rm hellodb-%i
-ExecStart=/usr/bin/docker run --rm --name hellodb-%i --env SERVICE_NAME=hellodb -P --dns 172.17.42.1 --dns-search=service.consul cargonauts/helloworld-python /srv/helloworld-db.py
-ExecStop=/usr/bin/docker stop hellodb-%i
-
