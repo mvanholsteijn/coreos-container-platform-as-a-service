@@ -17,6 +17,7 @@ function parseCommandLine() {
 			d)
 				DOMAIN_NAME=${OPTARG}
 				KEY_NAME=$(echo $OPTARG | sed -e 's/\([^\.]*\).*/\1/g')
+				HOSTED_ZONE=$(echo $OPTARG | sed -e "s/^${KEYNAME}\.//g')
 				STACK_NAME=$(echo $DOMAIN_NAME | sed -e 's/[^a-zA-Z0-9]//g')
 				STACK_DIR=stacks/$STACK_NAME
 				;;
@@ -156,7 +157,7 @@ function getAllPrivateIPAddresses() {
 
 
 function checkHostedZoneExists() {
-	DOMAIN=$(echo $DOMAIN_NAME | sed -e 's/[^\.]*.\(.*\)/\1/g')
+	DOMAIN=$(echo $DOMAIN_NAME | sed -e 's/[^\.]*\.\(.*\)/\1/g')
 	EXISTS=$( aws route53 list-hosted-zones  | \
 			jq -r '.HostedZones[] | .Name' | \
 			grep -i "^$DOMAIN.\$" )

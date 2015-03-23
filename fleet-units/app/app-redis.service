@@ -1,0 +1,13 @@
+[Unit]
+Description=app-redis
+
+[Service]
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/docker kill app-redis
+ExecStartPre=-/usr/bin/docker rm app-redis
+ExecStart=/usr/bin/docker run --rm --name app-redis -p 6379:6379 redis
+ExecStop=/usr/bin/docker stop app-redis
+
+[X-Fleet]
+Conflicts=app-redis.service

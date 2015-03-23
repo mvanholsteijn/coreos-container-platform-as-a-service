@@ -239,6 +239,23 @@
       }
     },
 
+    "AppDnsRecord": {
+      "Type": "AWS::Route53::RecordSetGroup",
+      "Properties": {
+        "HostedZoneName": "dutchdevops.net.",
+        "RecordSets": [
+          {
+            "Name": { "Fn::Join" : [ "", [ "*.", { "Ref" : "KeyName" } , ".dutchdevops.net." ] ] },
+            "Type": "CNAME",
+            "TTL": "300",
+            "ResourceRecords": [
+               { "Fn::GetAtt" : [ "AppLoadBalancer" , "DNSName" ] }
+            ]
+          }
+        ]
+      }
+    },
+
     "CoreOSServerAutoScaleConsulServer": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
