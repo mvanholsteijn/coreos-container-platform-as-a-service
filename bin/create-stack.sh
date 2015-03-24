@@ -188,6 +188,36 @@ function generatePassword() {
 }
 
 
+function checkPreconditions() {
+
+	FAIL=0;
+	if [ -z $(which jq) ] ; then
+		echo "ERROR: jq is not installed or not in PATH. please download and install jq from http://stedolan.github.io/jq/"
+		FAIL=1
+	fi
+
+	if [ -z $(which aws) ] ; then
+		echo "ERROR: aws CLI is not installed. please install http://docs.aws.amazon.com/cli/latest/userguide/installing.html"
+		FAIL=1
+	else
+		if ! aws ec2 describe-instances >/dev/null 2>&1  ; then
+			echo "ERROR: aws not properly configured. Please make sure aws ec describe-instances works properly"
+			FAIL=1
+		fi
+	fi
+
+	if [ -z $(which python) ] ; then
+		echo "ERROR: Python is not installed or not in PATH. please install"
+		FAIL=1
+	fi
+
+	if [ -z "$(pip list 2>/dev/null | grep Jinja2)" ] ; then
+		echo "ERROR: Python Jinja2 is not installed. please install using pip install Jinja2"
+		FAIL=1
+	fi
+}
+
+checkPreconditions
 parseCommandLine $@
 checkHostedZoneExists
 createKeyPair
