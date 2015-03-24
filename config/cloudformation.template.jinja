@@ -354,10 +354,12 @@
 	    "        [Service]\n",
 	    "        PartOf=consul-server.service\n",
 	    "        After=consul-server.service\n",
+	    "        Restart=always\n",
+	    "        RestartSec=10\n",
 	    "        EnvironmentFile=/etc/environment\n",
 	    "        ExecStartPre=-/usr/bin/docker kill consul-http-router\n",
 	    "        ExecStartPre=-/usr/bin/docker rm consul-http-router\n",
-	    "        ExecStart=/bin/sh -c \"/usr/bin/docker run --rm --name consul-http-router -p $COREOS_PRIVATE_IPV4:80:80 --dns 172.17.42.1 --dns-search=service.consul mvanholsteijn/consul-nginx\"\n",
+	    "        ExecStart=/bin/sh -c \"/usr/bin/docker run --rm --name consul-http-router -p $COREOS_PRIVATE_IPV4:80:80 --dns 172.17.42.1 --dns-search=service.consul cargonauts/consul-http-router\"\n",
 	    "        ExecStop=/usr/bin/docker stop consul-http-router\n"
             ] ]
           }
@@ -443,11 +445,11 @@
 	    "        PartOf=consul-client.service\n",
 	    "        After=consul-client.service\n",
 	    "        Restart=always\n",
-	    "        RestartSecs=10\n",
+	    "        RestartSec=10\n",
 	    "        EnvironmentFile=/etc/environment\n",
 	    "        ExecStartPre=-/usr/bin/docker kill consul-http-router\n",
 	    "        ExecStartPre=-/usr/bin/docker rm consul-http-router\n",
-	    "        ExecStart=/bin/sh -c \"/usr/bin/docker run --rm --name consul-http-router -p $COREOS_PRIVATE_IPV4:80:80 --dns 172.17.42.1 --dns-search=service.consul mvanholsteijn/consul-nginx\"\n",
+	    "        ExecStart=/bin/sh -c \"/usr/bin/docker run --rm --name consul-http-router -p $COREOS_PRIVATE_IPV4:80:80 --dns 172.17.42.1 --dns-search=service.consul cargonauts/consul-http-router\"\n",
 	    "        ExecStop=/usr/bin/docker stop consul-http-router\n"
             ] ]
           }

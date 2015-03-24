@@ -36,16 +36,24 @@ function parseCommandLine() {
 
 function createKeyPair() {
         SSH_PRIVATE_KEY=$(pwd)/$STACK_DIR/$KEY_NAME.pem
-	if [ -z "$(aws --region $REGION ec2 describe-key-pairs  --key-names $KEY_NAME)" ]  ; then
+	FINGERPRINT=$(aws --region $REGION ec2 describe-key-pairs  --key-names $KEY_NAME 2>/dev/null | jq -r '.KeyPairs[0].KeyFingerprint' 2>/dev/null)
+	if [ -z "$FINGERPRINT" ]  ; then
+		echo "INFO: generating a new key pair in $STACK_DIR/$KEY_NAME.pem"
 		mkdir -p $STACK_DIR
 		aws --region $REGION ec2 create-key-pair --key-name $KEY_NAME | \
 			jq -r  '.KeyMaterial' | \
-			sed 's/\\n/\r/g' > $STACK_DIR/$KEY_NAME.pem
-		 chmod 0700 $STACK_DIR/$KEY_NAME.pem
+			sed 's/\\n/\r/g' > $STACK_DIR/$KEY_NAME.pem 
+		chmod 0700 $STACK_DIR/$KEY_NAME.pem
 	else
 		if [ ! -f $STACK_DIR/$KEY_NAME.pem ] ; then
-			echo ERROR: key pair $STACK_NAME already exist, but I do not have it in $STACK_DIR.
+			echo ERROR: key pair $KEY_NAME already exist, but I do not have it in $STACK_DIR.
 			exit 1
+		else
+			MYFINGERPRINT=$(openssl pkcs8 -in $STACK_DIR/$KEY_NAME.pem -nocrypt -topk8 -outform DER | openssl sha1 -c)
+			if [ "$MYFINGERPRINT" != "$FINGERPRINT" ] ; then
+				echo ERROR: key pair $KEY_NAME already exist, but I have a different key in $STACK_DIR.
+				exit 1
+			fi
 		fi
 	fi
 }
