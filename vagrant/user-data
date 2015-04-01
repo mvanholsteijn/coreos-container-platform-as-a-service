@@ -1,0 +1,94 @@
+#cloud-config
+coreos:
+  etcd:
+      #generate a new token for each unique cluster from https://discovery.etcd.io/new
+      discovery: https://discovery.etcd.io/316554bc5572eeaf4fd4d4cef330f2bc
+      addr: $private_ipv4:4001
+      peer-addr: $private_ipv4:7001
+  fleet:
+    metadata: "region=eu-central-1,consul_role=server"
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: consul-server.service
+      command: start
+      content: |
+        [Unit]
+        Description=Consul Server Agent
+        After=docker.service
+        After=etcd.service
+        [Service]
+        Restart=always
+        RestartSec=60
+        ExecStartPre=-/usr/bin/docker kill consul
+        ExecStartPre=-/usr/bin/docker rm consul
+        ExecStartPre=/usr/bin/docker pull progrium/consul
+        ExecStart=/bin/sh -c "eval $(. /etc/environment; /usr/bin/docker run --rm progrium/consul cmd:run $COREOS_PRIVATE_IPV4 -e SERVICE_IGNORE=true -v /var/run/docker.sock:/var/run/docker.sock)"
+        ExecStop=/usr/bin/docker stop consul
+        [X-Fleet]
+        MachineMetadata=consul_role=server
+    - name: consul-server-announcer.service
+      command: start
+      content: |
+        [Unit]
+        Description=Consul Server Announcer
+        PartOf=consul-server.service
+        After=consul-server.service
+        [Service]
+        Restart=always
+        RestartSec=30
+        EnvironmentFile=/etc/environment
+        ExecStart=/bin/sh -c "while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done"
+        ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)"
+        [X-Fleet]
+        MachineMetadata=consul_role=server
+    - name: consul-server-registrator.service
+      command: start
+      content: |
+        [Unit]
+        Description=Registrator
+        PartOf=consul-server.service
+        After=consul-server.service
+        [Service]
+        Restart=always
+        RestartSec=60
+        ExecStartPre=-/usr/bin/docker kill registrator
+        ExecStartPre=-/usr/bin/docker rm registrator
+        ExecStartPre=/usr/bin/docker pull progrium/registrator
+        ExecStart=/bin/sh -c ". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500"
+        ExecStop=/usr/bin/docker stop registrator
+        [X-Fleet]
+        MachineMetadata=consul_role=server
+    - name: consul-http-router.service
+      command: start
+      content: |
+        [Unit]
+        Description=consul-http-router
+        [Service]
+        PartOf=consul-server.service
+        After=consul-server.service
+        Restart=always
+        RestartSec=10
+        EnvironmentFile=/etc/environment
+        ExecStartPre=-/usr/bin/docker kill consul-http-router
+        ExecStartPre=-/usr/bin/docker rm consul-http-router
+        ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router -P --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router"
+        ExecStop=/usr/bin/docker stop consul-http-router
+    - name: consul-http-router-lb.service
+      command: start
+      content: |
+        [Unit]
+        Description=consul-http-router-lb
+        [Service]
+        PartOf=consul-server.service
+        After=consul-http-router.service
+        Restart=always
+        RestartSec=10
+        EnvironmentFile=/etc/environment
+        ExecStartPre=-/usr/bin/docker kill consul-http-router-lb
+        ExecStartPre=-/usr/bin/docker rm consul-http-router-lb
+        ExecStartPre=-/usr/bin/docker pull cargonauts/consul-http-router-lb
+        ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router-lb -p :80:80 --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router-lb"
+        ExecStop=/usr/bin/docker stop consul-http-router-lb

@@ -7,6 +7,6 @@ RestartSec=15
 ExecStartPre=-/usr/bin/docker kill paas-monitor-%i
 ExecStartPre=-/usr/bin/docker rm paas-monitor-%i
 ExecStartPre=-/usr/bin/docker pull mvanholsteijn/paas-monitor
-ExecStart=/usr/bin/docker run --rm --name paas-monitor-%i --env SERVICE_NAME=paas-monitor --env SERVICE_TAGS=http -P --dns 172.17.42.1 --dns-search=service.consul mvanholsteijn/paas-monitor
+ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name paas-monitor-%i --env SERVICE_NAME=paas-monitor --env SERVICE_TAGS=http -P --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul mvanholsteijn/paas-monitor"
 ExecStop=/usr/bin/docker stop paas-monitor-%i
 
