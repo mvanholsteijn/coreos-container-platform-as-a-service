@@ -59,6 +59,7 @@ function wait_until_state() {
                 STATE=$(get_state $1)
         done
 	test -n "$OLDSTATE" && echo
+	test -z "$STATE" && STATE="removed"
 	echo  "$unit in state ${STATE}.";
 }
 
@@ -72,7 +73,7 @@ function restart_unit() {
 	STATE=$(get_state $1)
         if [ $STATE == "running" ] ; then
 		fleetctl stop $1
-		wait_until_state $1 "failed|stopped"
+		wait_until_state $1 "failed|dead"
 	fi
 	fleetctl destroy $1
 	wait_until_unit_is_gone $1
