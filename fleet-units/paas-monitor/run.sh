@@ -1,3 +1,4 @@
+#!/bin/bash
 
 function get_state() {
         fleetctl list-units -fields=unit,sub -no-legend | grep "^$1" | cut -f2
@@ -33,7 +34,7 @@ if [ $# -eq 2 -a -f "$1" -a $isnumber -eq 0  ] ; then
 	COUNT=1
 	while [ $COUNT -le $2 ]; do
 		unit=$(basename $1 .service)$COUNT.service
-		fleetctl submit $unit
+		fleetctl load $unit
 		COUNT=$(($COUNT + 1))
 	done
 
