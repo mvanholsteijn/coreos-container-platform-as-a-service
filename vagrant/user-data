@@ -3,7 +3,7 @@
 ---
 coreos:
   etcd:
-    discovery: https://discovery.etcd.io/251170ef64ecc60e4f045b163c9490c7
+    discovery: https://discovery.etcd.io/89988b91cc6527fc3d4b87cdfe519389
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   fleet:
@@ -26,6 +26,7 @@ coreos:
       [Service]
       Restart=always
       RestartSec=60
+      TimeoutStartSec=3m
       ExecStartPre=-/usr/bin/docker kill consul
       ExecStartPre=-/usr/bin/docker rm consul
       ExecStartPre=/usr/bin/docker pull progrium/consul
@@ -58,6 +59,7 @@ coreos:
       [Service]
       Restart=always
       RestartSec=60
+      TimeoutStartSec=3m
       ExecStartPre=-/usr/bin/docker kill registrator
       ExecStartPre=-/usr/bin/docker rm registrator
       ExecStartPre=/usr/bin/docker pull progrium/registrator
@@ -70,9 +72,9 @@ coreos:
     content: |
       [Unit]
       Description=consul-http-router
-      [Service]
       PartOf=consul-server.service
       After=consul-server.service
+      [Service]
       Restart=always
       RestartSec=10
       EnvironmentFile=/etc/environment
@@ -85,11 +87,12 @@ coreos:
     content: |
       [Unit]
       Description=consul-http-router-lb
-      [Service]
       PartOf=consul-server.service
       After=consul-http-router.service
+      [Service]
       Restart=always
       RestartSec=10
+      TimeoutStartSec=3m
       EnvironmentFile=/etc/environment
       ExecStartPre=-/usr/bin/docker kill consul-http-router-lb
       ExecStartPre=-/usr/bin/docker rm consul-http-router-lb
