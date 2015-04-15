@@ -1,12 +1,20 @@
 [Unit]
-Description=hellodb
+Description=hello world python with redis backend
 
 [Service]
 Restart=always
 RestartSec=15
 ExecStartPre=-/usr/bin/docker kill app-hellodb-%i
-ExecStartPre=-/usr/bin/docker rm hellodb-%i
-ExecStartPre=-/usr/bin/docker pull cargonauts/helloworld-python
-ExecStart=/usr/bin/docker run --rm --name app-hellodb-%i --env SERVICE_NAME=hellodb --env SERVICE_TAGS=http -P --dns 172.17.42.1 --dns-search=service.consul cargonauts/helloworld-python /srv/helloworld-db.py
+ExecStartPre=-/usr/bin/docker rm app-hellodb-%i
+ExecStartPre=-/usr/bin/docker pull cargonauts/app-hellodb
+ExecStart=/bin/sh -c "exec /usr/bin/docker run --rm \
+  --name app-hellodb-%i \
+  --env SERVICE_NAME=hellodb \
+  --env SERVICE_TAGS=http \
+  -P \
+  --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
+  --dns-search=service.consul \
+  cargonauts/helloworld-python \
+  /srv/helloworld-db.py"
 ExecStop=/usr/bin/docker stop app-hellodb-%i
-
+SyslogIdentifier=app-hellodb

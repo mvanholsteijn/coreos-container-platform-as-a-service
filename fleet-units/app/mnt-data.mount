@@ -1,0 +1,8 @@
+[Mount]
+What=172.17.8.100:/mnt/default/data
+Where=/mnt/data
+Type=nfs
+Options=noauto
+
+[X-Fleet]
+Global=true
