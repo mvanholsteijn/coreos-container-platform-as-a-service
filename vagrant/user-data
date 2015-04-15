@@ -3,7 +3,7 @@
 ---
 coreos:
   etcd:
-    discovery: https://discovery.etcd.io/89988b91cc6527fc3d4b87cdfe519389
+    discovery: https://discovery.etcd.io/will-be-generated
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   fleet:
@@ -15,6 +15,8 @@ coreos:
   - name: etcd.service
     command: start
   - name: fleet.service
+    command: start
+  - name: rpc-statd.service
     command: start
   - name: consul-server.service
     command: start
@@ -32,6 +34,7 @@ coreos:
       ExecStartPre=/usr/bin/docker pull progrium/consul
       ExecStart=/bin/sh -c "eval $(. /etc/environment; /usr/bin/docker run --rm progrium/consul cmd:run $COREOS_PRIVATE_IPV4 -e SERVICE_IGNORE=true -v /var/run/docker.sock:/var/run/docker.sock)"
       ExecStop=/usr/bin/docker stop consul
+      SyslogIdentifier=consul
       [X-Fleet]
       MachineMetadata=consul_role=server
   - name: consul-server-announcer.service
@@ -47,6 +50,7 @@ coreos:
       EnvironmentFile=/etc/environment
       ExecStart=/bin/sh -c "while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done"
       ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)"
+      SyslogIdentifier=consul-announcer
       [X-Fleet]
       MachineMetadata=consul_role=server
   - name: consul-server-registrator.service
@@ -65,6 +69,7 @@ coreos:
       ExecStartPre=/usr/bin/docker pull progrium/registrator
       ExecStart=/bin/sh -c ". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500"
       ExecStop=/usr/bin/docker stop registrator
+      SyslogIdentifier=registrator
       [X-Fleet]
       MachineMetadata=consul_role=server
   - name: consul-http-router.service
@@ -82,6 +87,7 @@ coreos:
       ExecStartPre=-/usr/bin/docker rm consul-http-router
       ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router -P --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router"
       ExecStop=/usr/bin/docker stop consul-http-router
+      SyslogIdentifier=consul-http-router
   - name: consul-http-router-lb.service
     command: start
     content: |
@@ -99,3 +105,9 @@ coreos:
       ExecStartPre=-/usr/bin/docker pull cargonauts/consul-http-router-lb
       ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router-lb -p :80:80 --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router-lb -consul consul:8500 -template \"/haproxy.ctmpl:/etc/haproxy/haproxy.cfg:service haproxy reload\" "
       ExecStop=/usr/bin/docker stop consul-http-router-lb
+      SyslogIdentifier=consul-http-router-lb
+write-files:
+- path: /etc/conf.d/nfs
+  permissions: '0644'
+  content: |
+    OPTS_RPC_MOUNTD=""
