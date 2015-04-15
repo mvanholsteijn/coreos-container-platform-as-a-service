@@ -1,5 +1,5 @@
 $num_instances=3
-Gupdate_channel='stable'
+$update_channel='stable'
 $forwarded_ports = { 80 => 8080 }
 
 #$ dd_api_key = '12325455'
