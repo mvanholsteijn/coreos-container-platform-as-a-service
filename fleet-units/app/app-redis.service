@@ -1,5 +1,7 @@
 [Unit]
 Description=app-redis
+Requires=mnt-data.mount
+After=mnt-data.mount
 RequiresMountsFor=/mnt/data
 
 [Service]
