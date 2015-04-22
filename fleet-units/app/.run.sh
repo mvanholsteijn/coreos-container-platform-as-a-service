@@ -1,9 +1,17 @@
 #!/bin/bash
-fleetctl submit app-hellodb@.service
-fleetctl submit app-redis.service
-fleetctl submit mnt-data.service
-fleetctl load mnt-data.service
+for unit in mnt-data.mount app-redis.service app-hellodb@.service; do
+	echo INFO: submitting unit file $unit
+	fleetctl submit $unit
+done
+
+for unit in mnt-data.mount app-redis.service ; do
+	echo INFO: loading fleet unit file $unit
+	fleetctl load $unit
+done
+echo INFO starting app-redis..
 fleetctl start app-redis.service
-fleetctl start app-hellodb@1.service
-fleetctl start app-hellodb@2.service
-fleetctl start app-hellodb@3.service
+
+for i in 1 2 3 ; do
+	echo INFO starting app-hello@$i..
+	fleetctl start app-hellodb@$i.service
+done
