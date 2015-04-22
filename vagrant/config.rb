@@ -2,7 +2,9 @@ $num_instances=3
 $update_channel='stable'
 $forwarded_ports = { 80 => 8080 }
 
-#$ dd_api_key = '12325455'
+#$add_nfs = true
+
+#$dd_api_key = '12325455'
 
 $new_discovery_url='https://discovery.etcd.io/new'
 
