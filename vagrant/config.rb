@@ -2,7 +2,7 @@ $num_instances=3
 $update_channel='stable'
 $forwarded_ports = { 80 => 8080 }
 
-#$add_nfs = true
+$add_nfs = true
 
 #$dd_api_key = '12325455'
 

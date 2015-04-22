@@ -43,21 +43,6 @@ def vm_cpus
   $vb_cpus.nil? ? $vm_cpus : $vb_cpus
 end
 
-if $add_nfs then
-  Vagrant.configure("2") do |cfg|
-    (1..[$num_instances, 3].min).each do |i|
-      cfg.vm.define vm_name = "nfs-%02d" % i do |cfg|
-	cfg.vm.box = "hashicorp/precise32"
-	cfg.vm.box_url = "https://atlas.hashicorp.com/hashicorp/precise32"
-	cfg.vm.box_version = ">= 1.0.0"
-	cfg.vm.hostname = "coreos-fake-nas"
-	cfg.vm.provision "shell", path: "nfsconfigure.sh"
-	cfg.vm.network :private_network, ip: "172.17.8.#{199+i}"
-      end
-    end
-  end
-end
-
 Vagrant.configure("2") do |config|
   # always use Vagrants insecure key
   config.ssh.insert_key = false
@@ -154,4 +139,17 @@ Vagrant.configure("2") do |config|
   end
 end   
 
-
+if $add_nfs then
+  Vagrant.configure("2") do |cfg|
+    (1..[$num_instances, 3].min).each do |i|
+      cfg.vm.define vm_name = "nfs-%02d" % i do |cfg|
+	cfg.vm.box = "hashicorp/precise32"
+	cfg.vm.box_url = "https://atlas.hashicorp.com/hashicorp/precise32"
+	cfg.vm.box_version = ">= 1.0.0"
+	cfg.vm.hostname = "nfs-0#{i}"
+	cfg.vm.provision "shell", path: "nfsconfigure.sh"
+	cfg.vm.network :private_network, ip: "172.17.8.#{199+i}"
+      end
+    end
+  end
+end
