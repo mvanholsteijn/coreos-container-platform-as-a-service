@@ -2,7 +2,7 @@ HOST=coreos
 ZONE=gce.dutchdevops.net
 
 sed -e "s^discovery: .*^discovery: $(curl -s https://discovery.etcd.io/new)^" \
-	../vagrant/user-data > user-data.yml
+	user-data > user-data.yml
 
 
 gcloud compute instances create core-01 core-02 core-03 \

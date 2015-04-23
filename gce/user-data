@@ -3,7 +3,7 @@
 ---
 coreos:
   etcd:
-    discovery: https://discovery.etcd.io/e2cc89cf9bbe1921b5d454040708b0ab
+    discovery: https://discovery.etcd.io/1636c92eb1dd59f2969b5ad6fc4b1c08
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   fleet:
@@ -85,27 +85,9 @@ coreos:
       EnvironmentFile=/etc/environment
       ExecStartPre=-/usr/bin/docker kill consul-http-router
       ExecStartPre=-/usr/bin/docker rm consul-http-router
-      ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router -P --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router"
+      ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router -p :80:80 --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router"
       ExecStop=/usr/bin/docker stop consul-http-router
       SyslogIdentifier=consul-http-router
-  - name: consul-http-router-lb.service
-    command: start
-    content: |
-      [Unit]
-      Description=consul-http-router-lb
-      PartOf=consul-server.service
-      After=consul-http-router.service
-      [Service]
-      Restart=always
-      RestartSec=10
-      TimeoutStartSec=3m
-      EnvironmentFile=/etc/environment
-      ExecStartPre=-/usr/bin/docker kill consul-http-router-lb
-      ExecStartPre=-/usr/bin/docker rm consul-http-router-lb
-      ExecStartPre=-/usr/bin/docker pull cargonauts/consul-http-router-lb
-      ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name consul-http-router-lb -p :80:80 --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') --dns-search=service.consul cargonauts/consul-http-router-lb -consul consul:8500 -template \"/haproxy.ctmpl:/etc/haproxy/haproxy.cfg:service haproxy reload\" "
-      ExecStop=/usr/bin/docker stop consul-http-router-lb
-      SyslogIdentifier=consul-http-router-lb
 write-files:
 - path: /etc/conf.d/nfs
   permissions: '0644'
