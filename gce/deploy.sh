@@ -44,5 +44,6 @@ gcloud dns managed-zones create gce-zone \
 
 gcloud dns record-sets transaction --zone gce-zone start
 gcloud dns record-sets transaction --zone gce-zone add --name="$HOST.$ZONE." --type=A "$IPADDRESS" --ttl 300
-gcloud dns record-sets transaction execute
+gcloud dns record-sets transaction execute --zone gce-zone
+rm transaction.yaml
 
