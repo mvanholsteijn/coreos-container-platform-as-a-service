@@ -45,4 +45,7 @@ if [ $# -eq 2 -a -f "$1" -a $isnumber -eq 0  ] ; then
 		wait_until_state $unit running
 		COUNT=$(($COUNT + 1))
 	done
+else
+	echo "USAGE: template-unit-file instance-count" >&2
+	exit 1
 fi
