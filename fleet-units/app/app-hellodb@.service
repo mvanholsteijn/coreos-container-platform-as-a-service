@@ -6,7 +6,10 @@ Restart=always
 RestartSec=15
 ExecStartPre=-/usr/bin/docker kill app-hellodb-%i
 ExecStartPre=-/usr/bin/docker rm app-hellodb-%i
-ExecStartPre=-/usr/bin/docker pull cargonauts/app-hellodb
+ExecStartPre=/bin/sh -c \
+	"docker history cargonauts/helloworld-python:latest >/dev/null || \
+	docker pull cargonauts/helloworld-python:latest"
+
 ExecStart=/bin/sh -c "exec /usr/bin/docker run --rm \
   --name app-hellodb-%i \
   --env SERVICE_NAME=hellodb \
@@ -16,5 +19,7 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run --rm \
   --dns-search=service.consul \
   cargonauts/helloworld-python \
   /srv/helloworld-db.py"
+
 ExecStop=/usr/bin/docker stop app-hellodb-%i
+
 SyslogIdentifier=app-hellodb

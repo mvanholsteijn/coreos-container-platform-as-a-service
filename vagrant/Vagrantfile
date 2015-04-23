@@ -48,7 +48,7 @@ Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
 
   config.vm.box = "coreos-%s" % $update_channel
-  config.vm.box_version = ">= 308.0.1"
+  config.vm.box_version = ">= 633.1.0"
   config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
 
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
@@ -135,6 +135,21 @@ Vagrant.configure("2") do |config|
         config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
       end
 
+    end
+  end
+end   
+
+if $add_nfs then
+  Vagrant.configure("2") do |cfg|
+    (1..[$num_instances, 3].min).each do |i|
+      cfg.vm.define vm_name = "nfs-%02d" % i do |cfg|
+	cfg.vm.box = "hashicorp/precise32"
+	cfg.vm.box_url = "https://atlas.hashicorp.com/hashicorp/precise32"
+	cfg.vm.box_version = ">= 1.0.0"
+	cfg.vm.hostname = "nfs-0#{i}"
+	cfg.vm.provision "shell", path: "nfsconfigure.sh"
+	cfg.vm.network :private_network, ip: "172.17.8.#{199+i}"
+      end
     end
   end
 end
