@@ -1,0 +1,31 @@
+[Unit]
+Description=consul-elasticsearch
+
+[Service]
+Restart=always
+RestartSec=15
+TimeoutStartSec=3m
+
+ExecStartPre=-/usr/bin/docker kill consul-elasticsearch-%i
+ExecStartPre=-/usr/bin/docker rm consul-elasticsearch-%i
+
+ExecStartPre=/bin/sh -c \
+	"docker history constantijn/consul-elasticsearch:latest >/dev/null || \
+	docker pull constantijn/consul-elasticsearch:latest"
+
+ExecStart=/bin/sh -c "/usr/bin/docker run --rm \
+    --name consul-elasticsearch-%i \
+	--env RELEASE=v1 \
+	--env SERVICE_9200_NAME=elasticsearch \
+	--env SERVICE_9200_TAGS=http \
+    --env SERVICE_9300_NAME=elasticsearch \
+    --env SERVICE_9300_TAGS=es-transport \
+    --env SERVICE_9300_ID=elasticsearch-%i \
+	-P \
+	--dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
+	--dns-search=service.consul \
+	constantijn/consul-elasticsearch"
+
+ExecStop=/usr/bin/docker stop consul-elasticsearch-%i
+
+SyslogIdentifier=consul-elasticsearch-%i
