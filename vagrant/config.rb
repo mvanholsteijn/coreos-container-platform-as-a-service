@@ -1,5 +1,6 @@
 $num_instances=3
 $update_channel='stable'
+$expose_consul_port = true
 $forwarded_ports = { 80 => 8080 }
 
 $add_nfs = true
