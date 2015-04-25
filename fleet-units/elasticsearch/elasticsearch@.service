@@ -1,29 +1,31 @@
 [Unit]
-Description=elasticsearch
+Description=ElasticSearch Cluster Node
 
 [Service]
 Restart=always
 RestartSec=15
 TimeoutStartSec=240
 
-ExecStartPre=-/usr/bin/docker kill elasticsearch-%i
-ExecStartPre=-/usr/bin/docker rm elasticsearch-%i
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
 
 ExecStartPre=/bin/sh -c \
     "docker history cargonauts/consul-elasticsearch:latest >/dev/null || \
     docker pull cargonauts/consul-elasticsearch:latest"
 
 ExecStart=/bin/sh -c "/usr/bin/docker run --rm \
-    --name elasticsearch-%i \
-    --env SERVICE_NAME=elasticsearch \
+    --name %P-%I \
+    --env SERVICE_NAME=%p \
     --env SERVICE_9200_TAGS=http \
-    --env SERVICE_9300_ID=elasticsearch-%i \
+    --env SERVICE_9300_ID=%p-%i \
     --env SERVICE_9300_TAGS=es-transport \
     -P \
     --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
     --dns-search=service.consul \
     cargonauts/consul-elasticsearch"
 
-ExecStop=/usr/bin/docker stop elasticsearch-%i
+ExecStop=/usr/bin/docker stop %p-%i
 
-SyslogIdentifier=elasticsearch-%i
+SuccessExitStatus=0 143 SIGTERM
+
+SyslogIdentifier=%p-%i
