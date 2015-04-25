@@ -67,7 +67,7 @@ coreos:
       ExecStartPre=-/usr/bin/docker kill registrator
       ExecStartPre=-/usr/bin/docker rm registrator
       ExecStartPre=/usr/bin/docker pull progrium/registrator
-      ExecStart=/bin/sh -c ". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500"
+      ExecStart=/bin/sh -c ". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500 -resync 60"
       ExecStop=/usr/bin/docker stop registrator
       SyslogIdentifier=registrator
       [X-Fleet]
