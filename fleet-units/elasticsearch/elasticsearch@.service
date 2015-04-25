@@ -17,7 +17,7 @@ ExecStart=/bin/sh -c "/usr/bin/docker run --rm \
     --name elasticsearch-%i \
     --env SERVICE_NAME=elasticsearch \
     --env SERVICE_9200_TAGS=http \
-    --env SERVICE_9300_ID=elasticsearch-%i.9300 \
+    --env SERVICE_9300_ID=elasticsearch-%i \
     --env SERVICE_9300_TAGS=es-transport \
     -P \
     --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
