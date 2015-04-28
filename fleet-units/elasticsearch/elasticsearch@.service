@@ -10,9 +10,6 @@ ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 
 ExecStartPre=/bin/sh -c \
-    "echo %%n=%n, %%N=%N, %%p=%p, %%i=%i, %%U=%U, %%u=%u, %%m=%m, %%H=%H, %%b=%b, %%v=%v"
-
-ExecStartPre=/bin/sh -c \
     "docker history cargonauts/consul-elasticsearch:latest >/dev/null || \
     docker pull cargonauts/consul-elasticsearch:latest"
 
