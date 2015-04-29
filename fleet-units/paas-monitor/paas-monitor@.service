@@ -1,29 +1,25 @@
 [Unit]
-Description=paas-monitor
+Description=%p
 
 [Service]
 Restart=always
 RestartSec=15
 TimeoutStartSec=2m
 
-ExecStartPre=-/usr/bin/docker kill paas-monitor-%i
-ExecStartPre=-/usr/bin/docker rm paas-monitor-%i
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
 
-ExecStartPre=/bin/sh -c \
-	"docker history datadog/docker-dd-agent:latest >/dev/null || \
-	docker pull datadog/docker-dd-agent:latest"
-
-ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name paas-monitor-%i \
+ExecStart=/bin/sh -c "/usr/bin/docker run --rm --name %p-%i \
 	--env RELEASE=v1 \
-	--env SERVICE_NAME=paas-monitor \
+	--env SERVICE_NAME=%p \
 	--env SERVICE_TAGS=http \
 	-P \
 	--dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
 	--dns-search=service.consul \
 	mvanholsteijn/paas-monitor"
 
-ExecStop=/usr/bin/docker stop paas-monitor-%i
+ExecStop=/usr/bin/docker stop %p-%i
 
 SuccessExitStatus=2
-SyslogIdentifier=paas-monitor-%i
+SyslogIdentifier=%p-%i
 
