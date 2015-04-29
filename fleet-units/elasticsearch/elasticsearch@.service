@@ -1,5 +1,8 @@
 [Unit]
 Description=ElasticSearch Cluster Node
+Requires=mnt-data.mount
+After=mnt-data.mount
+RequiresMountsFor=/mnt/data
 
 [Service]
 Restart=always
@@ -8,6 +11,8 @@ TimeoutStartSec=240
 
 ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
+
+ExecStartPre=/usr/bin/mkdir -p /mnt/data/%p-%i
 
 ExecStartPre=/bin/sh -c \
     "docker history cargonauts/consul-elasticsearch:latest >/dev/null || \
@@ -19,9 +24,11 @@ ExecStart=/bin/sh -c "/usr/bin/docker run --rm \
     --env SERVICE_9200_TAGS=http \
     --env SERVICE_9300_ID=%p-%i \
     --env SERVICE_9300_TAGS=es-transport \
+    --env TOTAL_NR_OF_SERVERS=$(fleetctl list-unit-files | grep '%p@[^\.][^\.]*.service' | wc -l) \
     -P \
     --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
     --dns-search=service.consul \
+    --volume /mnt/data/%p-%i:/usr/share/elasticsearch/data \
     cargonauts/consul-elasticsearch"
 
 ExecStop=/usr/bin/docker stop %p-%i
@@ -29,3 +36,6 @@ ExecStop=/usr/bin/docker stop %p-%i
 SuccessExitStatus=0 143 SIGTERM
 
 SyslogIdentifier=%N
+
+[X-Fleet]
+Conflicts=%p@*.service
