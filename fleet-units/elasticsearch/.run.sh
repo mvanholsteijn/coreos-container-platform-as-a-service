@@ -9,4 +9,4 @@ for unit in mnt-data.mount elasticsearch@{1..3}.service ; do
 	fleetctl load $unit
 done
 echo INFO starting ElasticSearch cluster nodes..
-fleetctl start elasticsearch@${1..3}.service
+fleetctl start elasticsearch@{1..3}.service
