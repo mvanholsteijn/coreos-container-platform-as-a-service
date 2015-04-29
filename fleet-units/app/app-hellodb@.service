@@ -4,8 +4,8 @@ Description=hello world python with redis backend
 [Service]
 Restart=always
 RestartSec=15
-ExecStartPre=-/usr/bin/docker kill app-hellodb-%i
-ExecStartPre=-/usr/bin/docker rm app-hellodb-%i
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStartPre=/bin/sh -c \
 	"docker history cargonauts/helloworld-python:latest >/dev/null || \
 	docker pull cargonauts/helloworld-python:latest"
@@ -20,6 +20,6 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run --rm \
   cargonauts/helloworld-python \
   /srv/helloworld-db.py"
 
-ExecStop=/usr/bin/docker stop app-hellodb-%i
+ExecStop=/usr/bin/docker stop %p-%i
 
-SyslogIdentifier=app-hellodb
+SyslogIdentifier=%p-%i

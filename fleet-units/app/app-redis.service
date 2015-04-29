@@ -7,8 +7,8 @@ RequiresMountsFor=/mnt/data
 [Service]
 Restart=always
 RestartSec=5
-ExecStartPre=-/usr/bin/docker kill app-redis
-ExecStartPre=-/usr/bin/docker rm app-redis
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm %p
 ExecStartPre=/usr/bin/mkdir -p /mnt/data/app-redis-data
 ExecStartPre=/bin/sh -c \
 	"docker history redis:latest >/dev/null || \
@@ -20,9 +20,9 @@ ExecStart=/usr/bin/docker run --rm \
     -p 6379:6379 \
     redis
 
-ExecStop=/usr/bin/docker stop app-redis
+ExecStop=/usr/bin/docker stop %p
 
-SyslogIdentifier=app-redis
+SyslogIdentifier=%p
 
 [X-Fleet]
 Conflicts=app-redis.service
