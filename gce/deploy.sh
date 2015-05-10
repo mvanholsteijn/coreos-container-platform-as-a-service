@@ -7,7 +7,7 @@ sed -e "s^discovery: .*^discovery: $(curl -s https://discovery.etcd.io/new)^" \
 
 gcloud compute instances create core-01 core-02 core-03 \
 	--image https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414 \
-	--machine-type n1-standard-1 \
+	--machine-type n1-standard-2 \
 	--metadata-from-file user-data=user-data.yml \
 	--tags http-server
 
