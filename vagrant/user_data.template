@@ -3,7 +3,7 @@
 ---
 coreos:
   etcd:
-    discovery: do-not-commit-an-url
+    discovery: to-be-generated
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   fleet:
@@ -12,6 +12,12 @@ coreos:
   flannel:
     interface: $private_ipv4
   units:
+  - name: docker.service
+    drop-ins:
+    - name: 50-insecure-registry.conf
+      content: |
+        [Service]
+        Environment=DOCKER_OPTS='--insecure-registry="registry.lgi.io:8080"'
   - name: etcd.service
     command: start
   - name: fleet.service
@@ -29,12 +35,30 @@ coreos:
       Restart=always
       RestartSec=60
       TimeoutStartSec=3m
-      ExecStartPre=-/usr/bin/docker kill consul
-      ExecStartPre=-/usr/bin/docker rm consul
-      ExecStartPre=/usr/bin/docker pull progrium/consul
-      ExecStart=/bin/sh -c "eval $(. /etc/environment; /usr/bin/docker run --rm progrium/consul cmd:run $COREOS_PRIVATE_IPV4 -e SERVICE_IGNORE=true -v /var/run/docker.sock:/var/run/docker.sock)"
-      ExecStop=/usr/bin/docker stop consul
-      SyslogIdentifier=consul
+      EnvironmentFile=/etc/environment
+      ExecStartPre=-/usr/bin/docker kill %p
+      ExecStartPre=-/usr/bin/docker rm %p
+      ExecStartPre=/usr/bin/docker pull cargonauts/progrium-consul
+      ExecStart=/bin/sh -c "exec /usr/bin/docker run \
+                --name %p -h %H \
+                -p $COREOS_PRIVATE_IPV4:8300:8300 \
+                -p $COREOS_PRIVATE_IPV4:8301:8301 \
+                -p $COREOS_PRIVATE_IPV4:8301:8301/udp \
+                -p $COREOS_PRIVATE_IPV4:8302:8302 \
+                -p $COREOS_PRIVATE_IPV4:8302:8302/udp \
+                -p $COREOS_PRIVATE_IPV4:8400:8400 \
+                -p $COREOS_PRIVATE_IPV4:8500:8500 \
+                -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53 \
+                -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53/udp \
+                -e SERVICE_IGNORE=true \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                cargonauts/progrium-consul \
+                -server \
+                -advertise $COREOS_PRIVATE_IPV4 \
+                -recursor $(awk '/^nameserver/{print $2}' /etc/resolv.conf) \
+                -bootstrap-expect 3"
+      ExecStop=/usr/bin/docker stop %p
+      SyslogIdentifier=%p
       [X-Fleet]
       MachineMetadata=consul_role=server
   - name: consul-server-announcer.service
@@ -48,7 +72,7 @@ coreos:
       Restart=always
       RestartSec=30
       EnvironmentFile=/etc/environment
-      ExecStart=/bin/sh -c "while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done"
+      ExecStart=/bin/sh -c "while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60; /usr/bin/docker exec consul-server consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done"
       ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)"
       SyslogIdentifier=consul-announcer
       [X-Fleet]
@@ -64,10 +88,11 @@ coreos:
       Restart=always
       RestartSec=60
       TimeoutStartSec=3m
+      EnvironmentFile=/etc/environment
       ExecStartPre=-/usr/bin/docker kill registrator
       ExecStartPre=-/usr/bin/docker rm registrator
       ExecStartPre=/usr/bin/docker pull progrium/registrator
-      ExecStart=/bin/sh -c ". /etc/environment; /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500 -resync 60"
+      ExecStart=/bin/sh -c "exec /usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$COREOS_PRIVATE_IPV4:8500 -resync 60"
       ExecStop=/usr/bin/docker stop registrator
       SyslogIdentifier=registrator
       [X-Fleet]
