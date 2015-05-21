@@ -152,6 +152,10 @@ if ($number_of_nfs_servers > 0) then
         cfg.vm.box_url = "https://atlas.hashicorp.com/hashicorp/precise32"
         cfg.vm.box_version = ">= 1.0.0"
         cfg.vm.hostname = "nfs-0#{i}"
+        cfg.vm.provider "virtualbox" do |v|
+           v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+           v.customize ["modifyvm", :id, "--nictype2", "virtio"]
+        end
         cfg.vm.provision "shell", path: "nfsconfigure.sh"
         cfg.vm.network :private_network, ip: "172.17.8.#{199+i}"
       end
