@@ -8,4 +8,4 @@ for f in $@ ; do
 	echo "      content: |"
 	sed -e '/Global=true/d' -e 's/^/        /' $f
 done
-) | sed -e 's/"/\\"/g' -e 's/^/	"/' -e 's/$/\\n",/'
+) | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/	"/' -e 's/$/\\n",/'
