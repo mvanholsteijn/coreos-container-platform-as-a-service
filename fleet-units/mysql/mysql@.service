@@ -1,0 +1,33 @@
+[Unit]
+Description=MySQL server
+Requires=mnt-data.mount
+After=mnt-data.mount
+RequiresMountsFor=/mnt/data
+
+[Service]
+Restart=always
+RestartSec=15
+TimeoutStartSec=240
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=/usr/bin/mkdir -p /mnt/data/%p-%i
+ExecStartPre=/bin/sh -c \
+    "docker history mysql:5.7 >/dev/null || \
+    docker pull mysql:5.7"
+
+ExecStart=/bin/sh -c "exec /usr/bin/docker run --rm \
+    --name %p-%i \
+    -p $COREOS_PRIVATE_IPV4:3306:3306 \
+    -e SERVICE_NAME=%p-%i \
+    -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+    --volume /mnt/data/%p-%i:/var/lib/mysql \
+    mysql:5.7"
+
+ExecStop=/usr/bin/docker stop %p-%i
+
+SyslogIdentifier=%N
+
+[X-Fleet]
+Conflicts=%p@*.service
