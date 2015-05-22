@@ -1,6 +1,5 @@
 [Mount]
 What=172.17.8.200:/srv/data
-#What=ec2-52-17-247-178.eu-west-1.compute.amazonaws.com:/srv/data
 Where=/mnt/data
 Type=nfs
 Options=sec=sys,vers=3,noauto
