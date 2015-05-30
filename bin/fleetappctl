@@ -377,7 +377,7 @@ case $COMMAND in
 		;;
 	destroy)
 		forEachInstance --reverse stopUnitFile
-		forEachInstance --reverse --include-template destroyUnitFile
+		forEachInstance --reverse destroyUnitFile
 		;;
 	*)
 		echo ERROR: $COMMAND not yet implemented... >&2
