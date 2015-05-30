@@ -12,6 +12,10 @@ $new_discovery_url = 'https://discovery.etcd.io/new'
 # To automatically replace the discovery token on 'vagrant up'
 # and the data dog api key
 
+if File.exists?('user_data') && ARGV[0].eql?('destroy')
+  File.delete('user_data')
+end
+
 if !File.exists?('user_data') && File.exists?('user_data.template') && ARGV[0].eql?('up')
   require 'open-uri'
   require 'yaml'
