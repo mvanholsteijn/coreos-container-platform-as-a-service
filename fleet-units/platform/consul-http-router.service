@@ -1,0 +1,21 @@
+[Unit]
+Description=consul-http-router
+PartOf=consul-server.service
+After=consul-server.service
+[Service]
+Restart=always
+RestartSec=10
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm %p
+ExecStartPre=-/usr/bin/docker pull cargonauts/consul-http-router
+ExecStart=/bin/sh -c "/usr/bin/docker run \
+  --rm --name consul-http-router \
+  -p :80:80 \
+  --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
+  --dns-search=service.consul \
+  cargonauts/consul-http-router"
+ExecStop=/usr/bin/docker stop %p
+SyslogIdentifier=%p
+[X-Fleet]
+Global=true
