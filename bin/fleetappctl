@@ -10,11 +10,12 @@
 #	
 DEPLOY_DIR=.deployment
 ENVFILE=
-DEPLOYMENT_DESCRIPTOR=
+DESCRIPTOR=deployit-manifest.xml
+SUFFIXES="swap|device|automount|mount|snapshot|slice|scope|path|time|socket|target|service"
 
 
 function parseCommandLine() {
-        USAGE="Usage: $(basename $0) [-d deployment-descriptor] [-e environment-file]  (prepare | submit | load | start | stop | deploy | stop | undeploy)"
+        USAGE="Usage: $(basename $0) [-d deployment-descriptor] [-e environment-file]  (generate | prepare | submit | load | start | stop | deploy | stop | undeploy)"
 
         while getopts "d:e:" OPT; do
                 case $OPT in
@@ -39,7 +40,7 @@ function parseCommandLine() {
         done
 	
 	case $1 in 
-		prepare|submit|load|start|stop|destroy)
+		list|generate|prepare|submit|load|start|stop|destroy)
 			COMMAND=$1
 			;;
 		*)
@@ -48,10 +49,9 @@ function parseCommandLine() {
 			;;
 	esac
 	
-	if [ -z "$DESCRIPTOR" ] ; then
-		if [ -f deployit-manifest.xml ] ; then
-			echo "INFO: using default deployment descriptor deployit-manifest.xml" >&2
-			DESCRIPTOR=deployit-manifest.xml
+	if [ "$COMMAND" != "generate" ] ; then
+		if [  -f $DESCRIPTOR ] ; then
+			echo "INFO: using deployment descriptor $DESCRIPTOR" >&2
 		else
 			echo $USAGE >&2
 			echo "ERROR: deployment descriptor is missing" >&2
@@ -73,7 +73,7 @@ function descriptorToTable() {
 }
 
 function isTemplateFile() {
-	local IS_TEMPLATE=$(echo $1 | egrep -e '@.(service|socket|device|mount|automount|swap|target|path|time|snapshot|slice|scope)')
+	local IS_TEMPLATE=$(echo $1 | egrep -e "@.($SUFFIXES)")
 	test -n "$IS_TEMPLATE"
 }
 
@@ -127,7 +127,8 @@ function forEachInstance() {
 
 function findPlaceHolders() {
 	local FILENAME=$2
-	sed -e 's/{{/#{{/g' -e 's/}}/}}#/g' $FILENAME | tr '#' '\n'  |  sed -n 's/{{\([^}]*\)}}/\1/p'
+	sed -e 's/{{/#{{/g' -e 's/}}/}}#/g' $FILENAME | tr '#' '\n'  |  sed -n 's/{{\([^}]*\)}}/\1/p' | \
+		sort -u
 }
 
 
@@ -191,6 +192,11 @@ function loadUnitFile() {
 			echo "INFO: $INSTANCE already loaded." >&2
 		fi
 	fi
+}
+
+function listUnits() {
+	fleetctl list-units | \
+		egrep -e "($(xml sel -t -m //fleet.UnitConfigurationFile -v @file -n deployit-manifest.xml | tr '\n' '|' | sed -e 's/@\./@[^\\.]*\\./' -e 's/|$//'))"
 }
 
 function getUnitState() {
@@ -272,6 +278,70 @@ function submitUnitFile() {
 	fi
 }
 
+function generateFleetUnitElement() {
+	FILE=$1
+	BASENAME=$(echo $FILE | sed -e "s/\([^\.]*\)\..*/\1/" -e 's/@$//')
+	echo ""
+	echo "    <fleet.UnitConfigurationFile name=\"$BASENAME\" file=\"$FILE\">"
+	echo "      <tags/>"
+
+	SCAN=false
+	if [ -n "$(findPlaceHolders $FILE $FILE)" ] ; then
+		SCAN=true
+	fi
+	echo "      <scanPlaceholders>$SCAN</scanPlaceholders>"
+	echo "      <startUnit>true</startUnit>"
+	if isTemplateFile $FILE ; then
+		echo "      <numberOfInstances>2</numberOfInstances>"
+	fi
+	echo "    </fleet.UnitConfigurationFile>"
+}
+
+function generateXmlManifest() {
+
+	echo '<?xml version="1.0" encoding="UTF-8"?>'
+	echo "<udm.DeploymentPackage version=\"1.0\" application=\"$(basename $PWD)\">"
+	echo "  <orchestrator />"
+	echo "  <satisfiesReleaseNotes>false</satisfiesReleaseNotes>"
+	echo "  <satisfiesPassedFunctionalTesting>false</satisfiesPassedFunctionalTesting>"
+	echo "  <satisfiesPassedAcceptanceTesting>false</satisfiesPassedAcceptanceTesting>"
+	echo "  <deployables>"
+
+	# generate non template files first
+	for SUFFIX in $(echo "$SUFFIXES" | sed -e 's/|/ /g') ; do
+		for FILE in $(ls -1 *.$SUFFIX 2>/dev/null) ; do
+			if ! isTemplateFile $FILE ; then
+				generateFleetUnitElement $FILE
+			fi
+		done
+	done
+
+	# generate template files later
+	for SUFFIX in $(echo "$SUFFIXES" | sed -e 's/|/ /g') ; do
+		for FILE in $(ls -1 *@.$SUFFIX 2>/dev/null) ; do
+			if  isTemplateFile $FILE ; then
+				generateFleetUnitElement $FILE 
+			fi
+		done
+	done
+
+
+	echo ""
+	echo "  </deployables>"
+	echo "</udm.DeploymentPackage>"
+}
+
+function generateDescriptor() {
+	if [ -f $DESCRIPTOR ] ; then
+		read -p "WARN: $DESCRIPTOR alrady exists. want to override? [yes|no] " OVERRIDE
+		if [ "$OVERRIDE" == "yes" ] ; then
+			mv $DESCRIPTOR ${DESCRIPTOR}-
+		else
+			exit 1
+		fi
+	fi
+	generateXmlManifest > $DESCRIPTOR
+}
 
 parseCommandLine "$@"
 checkPreconditions
@@ -279,6 +349,12 @@ checkPreconditions
 case $COMMAND in
 	show-place-holders)
 		forEachUnit findPlaceHolders | sort -u
+		;;
+	list)
+		listUnits
+		;;
+	generate)
+		generateDescriptor
 		;;
 	prepare)
 		forEachUnit copyUnitFile
