@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<udm.DeploymentPackage version="1.0" application="MyFleetApp">
+<udm.DeploymentPackage version="1.0" application="app">
   <orchestrator />
   <satisfiesReleaseNotes>false</satisfiesReleaseNotes>
   <satisfiesPassedFunctionalTesting>false</satisfiesPassedFunctionalTesting>
@@ -13,13 +13,15 @@
     </fleet.UnitConfigurationFile>
 
     <fleet.UnitConfigurationFile name="app-redis" file="app-redis.service">
-      <tags />
-      <scanPlaceholders>false</scanPlaceholders>
+      <tags/>
+      <scanPlaceholders>true</scanPlaceholders>
+      <startUnit>true</startUnit>
     </fleet.UnitConfigurationFile>
 
-    <fleet.UnitConfigurationFile name="hellodb" file="app-hellodb@.service">
-      <tags />
+    <fleet.UnitConfigurationFile name="app-hellodb" file="app-hellodb@.service">
+      <tags/>
       <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
       <numberOfInstances>3</numberOfInstances>
     </fleet.UnitConfigurationFile>
 
