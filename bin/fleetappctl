@@ -150,20 +150,31 @@ checkVariableSet() {
 		exit 1
 	fi
 }
+
+function checkXmlStarlet() {
+	PRESENT=$(xml --help 2>&1 | grep 'XMLStarlet')
+	if [ -z "$PRESENT" ] ; then
+		echo "ERROR: XMLStarlet not installed or not in path." >&2
+		exit 1
+	fi
+}
+
 function checkPreconditions() {
+	checkXmlStarlet
+
 	if [ ! -f "$DESCRIPTOR" -a "$COMMAND" != "generate"  ] ; then
 		echo "ERROR: descriptor $DESCRIPTOR is missing from the current directory."
 		exit 1
 	fi
 
-	 UNIT_WITH_PLACEHOLDERS=$(descriptorToTable $DESCRIPTOR | \
+	case "$COMMAND" in 
+		start)
+			 UNIT_WITH_PLACEHOLDERS=$(descriptorToTable $DESCRIPTOR | \
 					awk -F^ '{ if($3 == "true") { printf("%s,", $2); }}' | \
 					sed -e 's/,$//')
 
-	case "$COMMAND" in 
-		start)
 			if [ -n "$UNIT_WITH_PLACEHOLDERS" -a -z "$ENVFILE" ] ; then
-				echo "ERROR: No environment option (-e) specified, but units with placeholders in deployment: $UNIT_WITH_PLACEHOLDERS" >&2
+				echo "ERROR: No environment option (-e) specified, but placeholders found in: $UNIT_WITH_PLACEHOLDERS" >&2
 				exit 1
 			fi
 			checkVariableSet
@@ -361,8 +372,15 @@ function generateXmlManifest() {
 }
 
 function generateDescriptor() {
+
+	UNITFILES=$(ls -1 2>/dev/null | egrep $(echo $SUFFIXES | tr '|' '\n' | sed -e 's/.*/-e "*\\.&"/'))
+	if [ -z "$UNITFILES" ] ; then
+		echo "ERROR: No unit files in the current directory." >&2
+		exit 1
+	fi
+
 	if [ -f $DESCRIPTOR ] ; then
-		read -p "WARN: $DESCRIPTOR alrady exists. want to override? [yes|no] " OVERRIDE
+		read -p "WARN: $DESCRIPTOR already exists. want to override? [yes|no] " OVERRIDE
 		if [ "$OVERRIDE" == "yes" ] ; then
 			mv $DESCRIPTOR ${DESCRIPTOR}-
 		else
