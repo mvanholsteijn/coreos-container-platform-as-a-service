@@ -15,7 +15,7 @@ SUFFIXES="swap|device|automount|mount|snapshot|slice|scope|path|time|socket|targ
 
 
 function parseCommandLine() {
-        USAGE="Usage: $(basename $0) [-d deployment-descriptor] [-e environment-file]  (generate | prepare | submit | load | start | stop | deploy | stop | undeploy)"
+        USAGE="Usage: $(basename $0) [-d deployment-descriptor] [-e environment-file]  (generate | list | start | stop | destroy)"
 
         while getopts "d:e:" OPT; do
                 case $OPT in
@@ -40,7 +40,7 @@ function parseCommandLine() {
         done
 	
 	case $1 in 
-		list|generate|prepare|submit|load|start|stop|destroy)
+		placeholders|list|generate|start|stop|destroy)
 			COMMAND=$1
 			;;
 		*)
@@ -64,7 +64,7 @@ function parseCommandLine() {
 function descriptorToTable() {
 	 xml sel -t -m //fleet.UnitConfigurationFile \
 		-v 'concat(@name, "^", @file)' \
-		-v 'concat("^", ./scanPlaceHolders)' \
+		-v 'concat("^", ./scanPlaceholders)' \
 		-v 'concat("^", ./startUnit)' \
 		-v 'concat("^", ./numberOfInstances)' \
 		-m . \
@@ -140,13 +140,35 @@ function generateSedPlaceHolders() {
 	done
 }
 
-function checkPreconditions() {
-	if [ -z "$ENVFILE" ] ; then
-		 UNIT_WITH_PLACEHOLDERS=$(descriptorToTable $DESCRIPTOR | awk -F^ '{ if($3 == "true") { printf("%s,", $2); }}' | sed -e 's/,$//')
-		if [ -n "$UNIT_WITH_PLACEHOLDERS" ] ; then
-			echo "WARN: No environment specified, but units with placeholders in deployment: $UNIT_WITH_PLACEHOLDERS" >&2
-		fi
+checkVariableSet() {
+	KEYFILE=${TMPDIR:-/tmp}/keyfile$$.txt
+	sed -e 's/^\([^=]*\)=.*/\1/' $ENVFILE | sort -u > $KEYFILE
+	DIFF=$(forEachUnit findPlaceHolders | sort -u	| comm -1 -3 $KEYFILE - | tr '\n' ', ' | sed -e 's/,$//' -e 's/,/, /g')
+	rm -f $KEYFILE
+	if [ -n "$DIFF" ] ; then
+		echo "ERROR: The following variables are not specified in $ENVFILE: $DIFF" >&2
+		exit 1
 	fi
+}
+function checkPreconditions() {
+	if [ ! -f "$DESCRIPTOR" -a "$COMMAND" != "generate"  ] ; then
+		echo "ERROR: descriptor $DESCRIPTOR is missing from the current directory."
+		exit 1
+	fi
+
+	 UNIT_WITH_PLACEHOLDERS=$(descriptorToTable $DESCRIPTOR | \
+					awk -F^ '{ if($3 == "true") { printf("%s,", $2); }}' | \
+					sed -e 's/,$//')
+
+	case "$COMMAND" in 
+		start)
+			if [ -n "$UNIT_WITH_PLACEHOLDERS" -a -z "$ENVFILE" ] ; then
+				echo "ERROR: No environment option (-e) specified, but units with placeholders in deployment: $UNIT_WITH_PLACEHOLDERS" >&2
+				exit 1
+			fi
+			checkVariableSet
+			;;
+	esac
 }
 
 function removeLineContinuations() {
@@ -167,7 +189,7 @@ function copyUnitFile() {
 	local TARGET_PATH=$DEPLOY_DIR/$(basename $FILENAME)
 
 	if [ $SCAN_PLACE_HOLDERS == "true" ] ; then
-		[ -z "$ENVFILE" ] || generateSedPlaceHolders  > $DEPLOY_DIR/sedscript
+		generateSedPlaceHolders  > $DEPLOY_DIR/sedscript
 		sed -f $DEPLOY_DIR/sedscript $FILENAME | removeLineContinuations > $TARGET_PATH
 	else
 		cat $FILENAME | removeLineContinuations > $TARGET_PATH
@@ -208,6 +230,7 @@ function waitUntilUnitIsGone() {
 }
 
 function waitUntilUnitState() {
+	local RETRY=0
 	local OLDSTATE=""
         local STATE=$(getUnitState $1)
         while ! (echo $STATE | egrep -q "$2"); do
@@ -218,6 +241,12 @@ function waitUntilUnitState() {
 			echo -n .
 		fi
                 sleep 1;
+		RETRY=$(($RETRY + 1))
+		if [ $RETRY -ge 300 ] ; then
+			echo "ERROR: timeout waiting for the state $2."
+			exit 1
+		fi
+
 		OLDSTATE=$STATE
                 STATE=$(getUnitState $1)
         done
@@ -268,9 +297,9 @@ function submitUnitFile() {
 			  echo "INFO: unit $INSTANCE unchanged."
 		else
 			echo "INFO: unit $INSTANCE differs, destroying old one"
-			( cd $DEPLOY_DIR ; fleetctl destroy $INSTANCE
-			  echo "INFO: submitting $INSTANCE.."
-			  fleetctl submit $INSTANCE )
+			stopUnitFile "$@"
+			destroyUnitFile "$@"
+			( cd $DEPLOY_DIR ; echo "INFO: submitting $INSTANCE.."; fleetctl submit $INSTANCE )
 		fi
 	else
 		echo "INFO: submitting $1.."
@@ -341,13 +370,14 @@ function generateDescriptor() {
 		fi
 	fi
 	generateXmlManifest > $DESCRIPTOR
+	echo "INFO: generated $DESCRIPTOR." >&2
 }
 
 parseCommandLine "$@"
 checkPreconditions
 
 case $COMMAND in
-	show-place-holders)
+	placeholders)
 		forEachUnit findPlaceHolders | sort -u
 		;;
 	list)
@@ -356,23 +386,12 @@ case $COMMAND in
 	generate)
 		generateDescriptor
 		;;
-	prepare)
-		forEachUnit copyUnitFile
-		;;
-	submit)
-		forEachUnit copyUnitFile
-		forEachInstance submitUnitFile
-		;;
-	load)
-		forEachUnit copyUnitFile
-		forEachInstance submitUnitFile
-		forEachInstance loadUnitFile
-		;;
 	start)
-		forEachUnit copyUnitFile
+		copyUnitFiles
 		forEachInstance startUnitFile
 		;;
 	stop)
+		copyUnitFiles
 		forEachInstance --reverse stopUnitFile
 		;;
 	destroy)
