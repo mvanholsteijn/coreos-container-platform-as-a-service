@@ -1,18 +1,27 @@
-    - name: preamble
+#cloud-config
+---
+write-files:
+- path: /etc/conf.d/nfs
+  permissions: '0644'
+  content: |
+    OPTS_RPC_MOUNTD=""
+coreos:
+  etcd:
+    discovery: to-be-generated
+    addr: $private_ipv4:4001
+    peer-addr: $private_ipv4:7001
+  fleet:
+    public-ip: $private_ipv4
+    metadata: consul_role=server
+  flannel:
+    interface: $private_ipv4
+  units:
+    - name: etcd.service
       command: start
-      content: |
-        #cloud-config
-        ---
-        coreos:
-          etcd:
-            discovery: to-be-generated
-            addr: $private_ipv4:4001
-            peer-addr: $private_ipv4:7001
-          fleet:
-            public-ip: $private_ipv4
-            metadata: consul_role=server
-          flannel:
-            interface: $private_ipv4
+    - name: fleet.service
+      command: start
+    - name: rpc-statd.service
+      command: start
     - name: consul-http-router.service
       command: start
       content: |
@@ -126,9 +135,9 @@
           $(awk '/^nameserver/{print \" -recursor \" $2}' /etc/resolv.conf) \
           -bootstrap-expect 3"
         
-        ExecStop=/usr/bin/docker exec consul-server kill -INT 1
+        ExecStop=/usr/bin/docker stop %p
         SyslogIdentifier=%p
-        SuccesExitStatus=1
+        SuccessExitStatus=1
         
         [X-Fleet]
         X-ConditionMachineMetadata=consul_role=server

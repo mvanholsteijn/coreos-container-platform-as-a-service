@@ -1,7 +1,8 @@
 all: user-data user-data.json
 
 user-data: preamble *.service 
-	@( for f in $^ ; do   echo "    - name: $$(basename $$f)" ; echo "      command: start"; echo "      content: |" ; \
+	@( 	cat preamble ;  \
+		for f in *.service ; do   echo "    - name: $$(basename $$f)" ; echo "      command: start"; echo "      content: |" ; \
 		sed -e '/Global=true/d' -e 's/^/        /' $$f ; done  ) > $@ 
 	@echo $@ updated.
 

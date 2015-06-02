@@ -1,5 +1,10 @@
 #cloud-config
 ---
+write-files:
+- path: /etc/conf.d/nfs
+  permissions: '0644'
+  content: |
+    OPTS_RPC_MOUNTD=""
 coreos:
   etcd:
     discovery: to-be-generated
@@ -10,3 +15,10 @@ coreos:
     metadata: consul_role=server
   flannel:
     interface: $private_ipv4
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: rpc-statd.service
+      command: start
