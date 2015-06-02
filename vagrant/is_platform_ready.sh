@@ -9,8 +9,8 @@ function count_running() {
 } 
 
 RUNNING=$(count_running)
-while [ $RUNNING -ne 15 ] ; do
-	echo INFO: $RUNNING out of 15 processes running.. Waiting ...
+while [ $RUNNING -ne 12 ] ; do
+	echo INFO: $RUNNING out of 12 processes running.. Waiting ...
 	sleep 2
 	RUNNING=$(count_running)
 done
