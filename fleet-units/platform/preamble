@@ -7,6 +7,6 @@ coreos:
     peer-addr: $private_ipv4:7001
   fleet:
     public-ip: $private_ipv4
-    metadata: region=consul_role=server
+    metadata: consul_role=server
   flannel:
     interface: $private_ipv4

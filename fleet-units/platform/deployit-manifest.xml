@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<udm.DeploymentPackage version="1.0" application="platform">
+  <deployables>
+
+    <fleet.UnitConfigurationFile name="consul-server" file="consul-server.service">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
+    </fleet.UnitConfigurationFile>
+
+    <fleet.UnitConfigurationFile name="consul-server-announcer" file="consul-server-announcer.service">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
+    </fleet.UnitConfigurationFile>
+
+    <fleet.UnitConfigurationFile name="consul-server-registrator" file="consul-server-registrator.service">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
+    </fleet.UnitConfigurationFile>
+
+    <fleet.UnitConfigurationFile name="consul-http-router" file="consul-http-router.service">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
+    </fleet.UnitConfigurationFile>
+
+
+  </deployables>
+</udm.DeploymentPackage>

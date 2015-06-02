@@ -16,5 +16,5 @@ ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/m
 SyslogIdentifier=%p
 
 [X-Fleet]
-MachineMetadata=consul_role=server
 Global=true
+MachineMetadata=consul_role=server

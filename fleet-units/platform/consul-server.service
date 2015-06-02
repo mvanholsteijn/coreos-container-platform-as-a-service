@@ -11,7 +11,7 @@ TimeoutStartSec=3m
 EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p
 ExecStartPre=-/usr/bin/docker rm %p
-ExecStartPre=/usr/bin/docker pull cargonauts/consul
+ExecStartPre=/usr/bin/docker pull cargonauts/progrium-consul
 ExecStart=/bin/sh -c "exec /usr/bin/docker run \
   --name %p \
   -h %H \
@@ -34,7 +34,8 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
 
 ExecStop=/usr/bin/docker stop %p
 SyslogIdentifier=%p
+SuccessExitStatus=1
 
 [X-Fleet]
-MachineMetadata=consul_role=server
 Global=true
+X-ConditionMachineMetadata=consul_role=server
