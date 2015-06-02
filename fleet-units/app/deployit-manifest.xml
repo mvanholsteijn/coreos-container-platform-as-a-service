@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<udm.DeploymentPackage version="1.0" application="app">
+  <deployables>
+
+    <fleet.UnitConfigurationFile name="mnt-data" file="mnt-data.mount">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>false</startUnit>
+    </fleet.UnitConfigurationFile>
+
+    <fleet.UnitConfigurationFile name="app-redis" file="app-redis.service">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
+    </fleet.UnitConfigurationFile>
+
+    <fleet.UnitConfigurationFile name="app-hellodb" file="app-hellodb@.service">
+      <scanPlaceholders>false</scanPlaceholders>
+      <startUnit>true</startUnit>
+      <numberOfInstances>2</numberOfInstances>
+    </fleet.UnitConfigurationFile>
+
+  </deployables>
+</udm.DeploymentPackage>
