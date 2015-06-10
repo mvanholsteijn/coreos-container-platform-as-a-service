@@ -5,7 +5,6 @@ Before=consul-server.service
 
 [Service]
 Restart=always
-RestartSec=30
 
 EnvironmentFile=/etc/environment
 ExecStart=/bin/sh -c "while true; do \

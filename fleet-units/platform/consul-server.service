@@ -5,7 +5,6 @@ After=etcd.service
 
 [Service]
 Restart=always
-RestartSec=60
 TimeoutStartSec=180
 
 EnvironmentFile=/etc/environment

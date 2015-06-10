@@ -3,7 +3,7 @@ Description=consul-http-router
 After=consul-server.service
 [Service]
 Restart=always
-RestartSec=10
+
 EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p
 ExecStartPre=-/usr/bin/docker rm %p

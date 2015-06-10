@@ -1,11 +1,9 @@
 [Unit]
 Description=Registrator
-PartOf=consul-server.service
 After=consul-server.service
 
 [Service]
 Restart=always
-RestartSec=60
 TimeoutStartSec=3m
 EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p
