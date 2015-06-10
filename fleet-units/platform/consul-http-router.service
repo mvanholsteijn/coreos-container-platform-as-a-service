@@ -1,6 +1,5 @@
 [Unit]
 Description=consul-http-router
-PartOf=consul-server.service
 After=consul-server.service
 [Service]
 Restart=always
