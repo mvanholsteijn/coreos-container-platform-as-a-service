@@ -1,7 +1,7 @@
 [Unit]
 Description=Consul Server Announcer
 PartOf=consul-server.service
-After=consul-server.service
+Before=consul-server.service
 
 [Service]
 Restart=always
@@ -10,8 +10,9 @@ RestartSec=30
 EnvironmentFile=/etc/environment
 ExecStart=/bin/sh -c "while true; do \
   etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60;\
-  /usr/bin/docker exec consul-server consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45;\
+  sleep 45;\
  done"
+
 ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)"
 SyslogIdentifier=%p
 
