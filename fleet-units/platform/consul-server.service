@@ -27,13 +27,14 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
   -p $COREOS_PRIVATE_IPV4:8500:8500 \
   -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53 \
   -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53/udp \
-  -e SERVICE_IGNORE=true \
+  -e SERVICE_8500_NAME=consul-ui \
+  -e SERVICE_8500_TAGS=http \
   -v /var/run/docker.sock:/var/run/docker.sock \
   cargonauts/progrium-consul \
   -server \
   -advertise $COREOS_PRIVATE_IPV4 \
   $(awk '/^nameserver/{print \" -recursor \" $2}' /etc/resolv.conf) \
-  $(etcdctl ls /consul/bootstrap/machines | xargs -n 1 etcdctl get | sed -e 's/^/-join /') \
+  $(fleetctl list-units -no-legend -fields=unit,machine | sed -n -e 's/^%n[^\/]*\/\([0-9]\)/-join \1/p')
   -bootstrap-expect 3"
 
 ExecStop=/usr/bin/docker stop %p

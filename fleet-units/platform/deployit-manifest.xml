@@ -7,11 +7,6 @@
       <startUnit>true</startUnit>
     </fleet.UnitConfigurationFile>
 
-    <fleet.UnitConfigurationFile name="consul-server-announcer" file="consul-server-announcer.service">
-      <scanPlaceholders>false</scanPlaceholders>
-      <startUnit>true</startUnit>
-    </fleet.UnitConfigurationFile>
-
     <fleet.UnitConfigurationFile name="consul-server-registrator" file="consul-server-registrator.service">
       <scanPlaceholders>false</scanPlaceholders>
       <startUnit>true</startUnit>
