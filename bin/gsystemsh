@@ -1,0 +1,8 @@
+#!/bin/bash
+# 
+# executes a systemctl command on all the machines in the cluster
+#
+MACHINES=$(fleetctl list-machines -fields=machine -full -no-legend)
+for MACHINE in $MACHINES; do
+	fleetctl ssh $MACHINE "$@"
+done
