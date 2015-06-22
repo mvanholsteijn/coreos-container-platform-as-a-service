@@ -1,6 +1,6 @@
 all: user-data user-data.json
 
-user-data: preamble consul-http-router.service consul-server-announcer.service consul-server-registrator.service consul-server.service
+user-data: preamble consul-http-router.service consul-server-registrator.service consul-server.service
 	@( 	cat preamble ;  \
 		for f in *.service ; do   echo "    - name: $$(basename $$f)" ; echo "      command: start"; echo "      content: |" ; \
 		sed -e '/Global=true/d' -e 's/^/        /' $$f ; done  ) > $@ 

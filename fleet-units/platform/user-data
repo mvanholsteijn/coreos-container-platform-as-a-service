@@ -46,28 +46,6 @@ coreos:
         SuccessExitStatus=11 12
         [X-Fleet]
         MachineMetadata=consul_role=server
-    - name: consul-server-announcer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Consul Server Announcer
-        PartOf=consul-server.service
-        Before=consul-server.service
-        
-        [Service]
-        Restart=always
-        
-        EnvironmentFile=/etc/environment
-        ExecStart=/bin/sh -c "while true; do \
-          etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60;\
-          sleep 45;\
-         done"
-        
-        ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)"
-        SyslogIdentifier=%p
-        
-        [X-Fleet]
-        MachineMetadata=consul_role=server
     - name: consul-server-registrator.service
       command: start
       content: |
@@ -127,13 +105,14 @@ coreos:
           -p $COREOS_PRIVATE_IPV4:8500:8500 \
           -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53 \
           -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53/udp \
-          -e SERVICE_IGNORE=true \
+          -e SERVICE_8500_NAME=consul-ui \
+          -e SERVICE_8500_TAGS=http \
           -v /var/run/docker.sock:/var/run/docker.sock \
           cargonauts/progrium-consul \
           -server \
           -advertise $COREOS_PRIVATE_IPV4 \
           $(awk '/^nameserver/{print \" -recursor \" $2}' /etc/resolv.conf) \
-          $(etcdctl ls /consul/bootstrap/machines | xargs -n 1 etcdctl get | sed -e 's/^/-join /') \
+          $(fleetctl list-units -no-legend -fields=unit,machine | sed -n -e 's/^%n[^\/]*\/\([0-9]\)/-join \1/p') \
           -bootstrap-expect 3"
         
         ExecStop=/usr/bin/docker stop %p
