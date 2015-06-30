@@ -2,7 +2,18 @@
 # 
 # executes a systemctl command on all the machines in the cluster
 #
+CMD=$(basename $0)
+if [ "$CMD" == "gsystemsh" ] ; then
+	CMD=""
+else
+	CMD=$(basename $0 | sed -e 's/^g//')
+fi
+
 MACHINES=$(fleetctl list-machines -fields=machine -full -no-legend)
 for MACHINE in $MACHINES; do
-	fleetctl ssh $MACHINE "$@"
+	if [ -n "$CMD" ] ; then
+		fleetctl ssh $MACHINE "$@"
+	else
+		fleetctl ssh $MACHINE $CMD "$@"
+	fi
 done
