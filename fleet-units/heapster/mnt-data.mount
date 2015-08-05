@@ -1,0 +1,8 @@
+[Mount]
+What=172.17.8.200:/srv/data
+Where=/mnt/data
+Type=nfs
+Options=sec=sys,vers=3,noauto
+
+[X-Fleet]
+Global=true

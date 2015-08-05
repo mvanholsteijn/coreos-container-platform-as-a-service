@@ -1,0 +1,31 @@
+[Unit]
+Description=heapster
+
+Requires=heapster-influxdb.service
+After=heapster-influxdb.service
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+EnvironmentFile=/etc/environment
+
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=/bin/sh -c \
+  "docker history kubernetes/heapster:v0.13.0 >/dev/null || \
+  docker pull kubernetes/heapster:v0.13.0"
+
+ExecStart=/bin/sh  -c "/usr/bin/docker run \
+  --name heapster \
+  --link heapster-influxdb:influxdb \
+  kubernetes/heapster:v0.13.0 \
+  --source=cadvisor:coreos\?fleetEndpoint=http://$COREOS_PRIVATE_IPV4:4001\&cadvisorPort=8888 \
+  --sink=influxdb:http://influxdb:8086"
+
+ExecStop=/usr/bin/docker stop %p
+SyslogIdentifier=%p
+SuccessExitStatus=2
+
+[X-Fleet]
+X-ConditionMachineOf=heapster-influxdb.service
