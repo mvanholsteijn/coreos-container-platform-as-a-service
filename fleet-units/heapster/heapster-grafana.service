@@ -17,7 +17,7 @@ ExecStartPre=/bin/sh -c \
   /usr/bin/docker pull kubernetes/heapster_grafana:v0.7"
 
 ExecStart=/usr/bin/docker run \
-  --name grafana \
+  --name %p \
   --link heapster-influxdb:influxdb \
   -P \
   -e SERVICE_NAME=heapster \
