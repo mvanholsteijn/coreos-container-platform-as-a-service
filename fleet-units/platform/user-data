@@ -113,7 +113,7 @@ coreos:
           -server \
           -advertise $COREOS_PRIVATE_IPV4 \
           $(awk '/^nameserver/{print \" -recursor \" $2}' /etc/resolv.conf) \
-          $(fleetctl list-units -no-legend -fields=unit,machine | sed -n -e 's/^%n[^\/]*\/\([0-9]\)/-join \1/p') \
+          $(fleetctl list-machines | awk '/consul_role=server/{print \"-join \" $2}') \
           -bootstrap-expect 3"
         
         ExecStop=/usr/bin/docker stop %p

@@ -116,7 +116,7 @@
         "          -server \\\n",
         "          -advertise $COREOS_PRIVATE_IPV4 \\\n",
         "          $(awk '/^nameserver/{print \\\" -recursor \\\" $2}' /etc/resolv.conf) \\\n",
-        "          $(fleetctl list-units -no-legend -fields=unit,machine | sed -n -e 's/^%n[^\\/]*\\/\\([0-9]\\)/-join \\1/p') \\\n",
+        "          $(fleetctl list-machines | awk '/consul_role=server/{print \\\"-join \\\" $2}') \\\n",
         "          -bootstrap-expect 3\"\n",
         "        \n",
         "        ExecStop=/usr/bin/docker stop %p\n",
