@@ -6,19 +6,17 @@ write-files:
   content: |
     OPTS_RPC_MOUNTD=""
 coreos:
-  etcd2:
+  etcd:
     discovery: to-be-generated
-    advertise-client-urls: http://$private_ipv4:2379
-    initial-advertise-peer-urls: http://$private_ipv4:2380
-    listen-client-urls: http://0.0.0.0:2379
-    listen-peer-urls: http://$private_ipv4:2380
+    addr: $private_ipv4:4001
+    peer-addr: $private_ipv4:7001
   fleet:
     public-ip: $private_ipv4
     metadata: consul_role=server
   flannel:
     interface: $private_ipv4
   units:
-    - name: etcd2.service
+    - name: etcd.service
       command: start
     - name: fleet.service
       command: start
@@ -29,46 +27,23 @@ coreos:
       content: |
         [Unit]
         Description=consul-http-router
-        PartOf=consul-server.service
         After=consul-server.service
         [Service]
         Restart=always
-        RestartSec=10
+        
         EnvironmentFile=/etc/environment
         ExecStartPre=-/usr/bin/docker kill %p
         ExecStartPre=-/usr/bin/docker rm %p
-        ExecStartPre=-/usr/bin/docker pull mvanholsteijn/consul-http-router
+        ExecStartPre=-/usr/bin/docker pull cargonauts/consul-http-router
         ExecStart=/bin/sh -c "exec /usr/bin/docker run \
           --rm --name consul-http-router \
           -p :80:80 \
           --dns $(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
           --dns-search=service.consul \
-          mvanholsteijn/consul-http-router"
+          cargonauts/consul-http-router"
         ExecStop=/usr/bin/docker stop %p
         SyslogIdentifier=%p
         SuccessExitStatus=11 12
-        [X-Fleet]
-        MachineMetadata=consul_role=server
-    - name: consul-server-announcer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Consul Server Announcer
-        PartOf=consul-server.service
-        After=consul-server.service
-        
-        [Service]
-        Restart=always
-        RestartSec=30
-        
-        EnvironmentFile=/etc/environment
-        ExecStart=/bin/sh -c "while true; do \
-          etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $COREOS_PRIVATE_IPV4 --ttl 60;\
-          /usr/bin/docker exec consul-server consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45;\
-         done"
-        ExecStop=/bin/sh -c "/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)"
-        SyslogIdentifier=%p
-        
         [X-Fleet]
         MachineMetadata=consul_role=server
     - name: consul-server-registrator.service
@@ -76,24 +51,23 @@ coreos:
       content: |
         [Unit]
         Description=Registrator
-        PartOf=consul-server.service
         After=consul-server.service
         
         [Service]
         Restart=always
-        RestartSec=60
         TimeoutStartSec=3m
         EnvironmentFile=/etc/environment
         ExecStartPre=-/usr/bin/docker kill %p
         ExecStartPre=-/usr/bin/docker rm %p
-        ExecStartPre=/usr/bin/docker pull progrium/registrator
+        ExecStartPre=/bin/sh -c "/usr/bin/docker history gliderlabs/registrator:v6 || \
+           /usr/bin/docker pull gliderlabs/registrator:v6"
+        
         ExecStart=/bin/sh -c "exec /usr/bin/docker run \
-          --name %p \
-          -h registrator \
           -v /var/run/docker.sock:/tmp/docker.sock \
-           progrium/registrator \
-           consul://$COREOS_PRIVATE_IPV4:8500 \
-           -resync 60"
+           gliderlabs/registrator:v6 \
+           -ip $COREOS_PRIVATE_IPV4 \
+           -resync 60 \
+           consul://$COREOS_PRIVATE_IPV4:8500"
         ExecStop=/usr/bin/docker stop %p
         SyslogIdentifier=%p
         SuccessExitStatus=2
@@ -110,13 +84,16 @@ coreos:
         
         [Service]
         Restart=always
-        RestartSec=60
-        TimeoutStartSec=3m
+        TimeoutStartSec=180
         
         EnvironmentFile=/etc/environment
         ExecStartPre=-/usr/bin/docker kill %p
         ExecStartPre=-/usr/bin/docker rm %p
-        ExecStartPre=/usr/bin/docker pull cargonauts/progrium-consul
+        
+        ExecStartPre=/bin/sh -c \
+            "docker history cargonauts/progrium-consul >/dev/null || \
+            docker pull cargonauts/progrium-consul"
+        
         ExecStart=/bin/sh -c "exec /usr/bin/docker run \
           --name %p \
           -h %H \
@@ -129,12 +106,14 @@ coreos:
           -p $COREOS_PRIVATE_IPV4:8500:8500 \
           -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53 \
           -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2}'):53:53/udp \
-          -e SERVICE_IGNORE=true \
+          -e SERVICE_8500_NAME=consul-ui \
+          -e SERVICE_8500_TAGS=http \
           -v /var/run/docker.sock:/var/run/docker.sock \
           cargonauts/progrium-consul \
           -server \
           -advertise $COREOS_PRIVATE_IPV4 \
           $(awk '/^nameserver/{print \" -recursor \" $2}' /etc/resolv.conf) \
+          $(fleetctl list-units -no-legend -fields=unit,machine | sed -n -e 's/^%n[^\/]*\/\([0-9]\)/-join \1/p') \
           -bootstrap-expect 3"
         
         ExecStop=/usr/bin/docker stop %p

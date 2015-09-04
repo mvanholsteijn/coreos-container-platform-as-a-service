@@ -8,9 +8,10 @@ function count_running() {
 	sed -e 's/[ \t]*//g'
 } 
 
+EXPECT=$(expr 3 \* $(grep 'name: consul-' user_data | wc -l))
 RUNNING=$(count_running)
-while [ $RUNNING -ne 12 ] ; do
-	echo INFO: $RUNNING out of 12 processes running.. Waiting ...
+while [ $RUNNING -ne $EXPECT ] ; do
+	echo INFO: $RUNNING out of $EXPECT processes running.. Waiting ...
 	sleep 2
 	RUNNING=$(count_running)
 done

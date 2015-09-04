@@ -23,7 +23,7 @@ if !File.exists?('user_data') && File.exists?('user_data.template') && ARGV[0].e
   token = open($new_discovery_url).read
  
   data = YAML.load(IO.readlines('user_data.template')[1..-1].join)
-  data['coreos']['etcd2']['discovery'] = token
+  data['coreos']['etcd']['discovery'] = token
 
   if $datadog_api_key
     updated = false
