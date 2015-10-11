@@ -1,0 +1,3 @@
+[submodule "fleet-units/platform"]
+	path = fleet-units/platform
+	url = git@github.com:mvanholsteijn/fleet-units-coreos-platform
