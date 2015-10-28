@@ -22,3 +22,25 @@ coreos:
       command: start
     - name: rpc-statd.service
       command: start
+    - name: autostart-platform.service
+      command: start
+      content: |
+        - name: auto-start-platform.service
+            command: start
+            content: |
+              [Unit]
+              Description=Autostarts platform services
+              Requires=docker.service fleet.service
+              After=docker.service fleet.service
+        
+              [Service]
+              User=root
+              ExecStartPre=/usr/bin/git clone -b master https://github.com/mvanholsteijn/fleet-units-coreos-platform /etc/platform_services
+              ExecStartPre=/bin/sh -c "while [ $(fleetctl list-machines -no-legend | wc -l) -eq 0 ]; \
+        	do sleep 1; echo 'Waiting for fleet to initialize'; \
+        	done"
+              ExecStart=/bin/sh -c "shopt -s nullglob; \
+        	cd /etc/platform_services; \
+        	for unit in *; do /usr/bin/fleetctl start $unit; done;"
+              Type=oneshot
+              RemainAfterExit=yes

@@ -8,9 +8,6 @@ function count_running() {
 	sed -e 's/[ \t]*//g'
 } 
 
-ssh-add ~/.vagrant.d/insecure_private_key
-(cd ../fleet-units/platform; fleetctl start *.service)
-
 EXPECT=$(expr 3 \* $(ls -1 ../fleet-units/platform/*.service | wc -l))
 RUNNING=$(count_running)
 while [ $RUNNING -ne $EXPECT ] ; do
