@@ -5,7 +5,23 @@ write-files:
   permissions: '0644'
   content: |
     OPTS_RPC_MOUNTD=""
+
+- path: /etc/hosts
+  permissions: '0644'
+  content: |
+    172.17.8.101 core-01
+    172.17.8.102 core-02
+    172.17.8.103 core-03
+    172.17.8.200 nfs-01
+
+- path: /etc/sysctl.d/90-override.conf
+  permissions: '0644'
+  content: |
+    net.ipv6.conf.all.forwarding=1
+
 coreos:
+  update:
+    reboot-strategy: 'off'
   etcd:
     discovery: to-be-generated
     addr: $private_ipv4:4001
@@ -16,12 +32,57 @@ coreos:
   flannel:
     interface: $private_ipv4
   units:
+    - name: systemd-networkd.service
+      command: restart
+      drop-ins:
+        - name: 10-ipforward.network
+          content: |
+            [Match]
+            Name=eth*
+            [Network]
+            IPForward=true
+
+    - name: 90-docker0.network
+      runtime: true
+      content: |
+        [Match]
+        Name=docker0
+        [Network]
+        Address=172.18.42.1/24
+        Gateway=172.18.42.1
+
+    - name: docker-tcp.socket
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Docker Socket for the API
+
+        [Socket]
+        ListenStream=2375
+        BindIPv6Only=both
+        Service=docker.service
+
+        [Install]
+        WantedBy=sockets.target
+
     - name: etcd.service
       command: start
+
     - name: fleet.service
       command: start
+
     - name: rpc-statd.service
       command: start
+
+    - name: docker.service
+      command: restart
+      drop-ins:
+        - name: 50-docker-opts.conf
+          content: |
+            [Service]
+            Environment="DOCKER_OPTS=--bip 172.18.42.1/24 --dns 172.18.42.1 --dns-search service.consul --dns 8.8.8.8"
+
     - name: autostart-platform.service
       command: start
       content: |
@@ -35,12 +96,14 @@ coreos:
         
               [Service]
               User=root
-              ExecStartPre=/usr/bin/git clone -b master https://github.com/mvanholsteijn/fleet-units-coreos-platform /etc/platform_services
               ExecStartPre=/bin/sh -c "while [ $(fleetctl list-machines -no-legend | wc -l) -eq 0 ]; \
-        	do sleep 1; echo 'Waiting for fleet to initialize'; \
-        	done"
+               do sleep 1; echo 'Waiting for fleet to initialize'; \
+               done"
+              ExecStartPre=/usr/bin/git clone -b master https://github.com/mvanholsteijn/fleet-units-coreos-platform /etc/platform_services
               ExecStart=/bin/sh -c "shopt -s nullglob; \
-        	cd /etc/platform_services; \
-        	for unit in *; do /usr/bin/fleetctl start $unit; done;"
+                cd /etc/platform_services; \
+               git checkout coreos-consul ; \
+                for unit in *; do /usr/bin/fleetctl load $unit; done; \
+                for unit in *; do /usr/bin/fleetctl start $unit; done;"
               Type=oneshot
               RemainAfterExit=yes
