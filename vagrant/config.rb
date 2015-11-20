@@ -1,4 +1,4 @@
-$num_instances=1
+$num_instances=3
 $vm_memory=1024
 $vm_cpu=1
 $update_channel='stable'
